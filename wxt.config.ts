@@ -9,6 +9,9 @@ export default defineConfig({
 		baseIconPath: 'assets/icon.svg',
 		developmentIndicator: false,
 	},
+	manifest: {
+		permissions: ['clipboardRead', 'clipboardWrite', 'storage'],
+	},
 	vite: () => ({
 		plugins: [tailwindcss()],
 	}),
