@@ -5,6 +5,11 @@ export default defineContentScript({
 	main() {
 		document.addEventListener('copy', unredact);
 		document.addEventListener('cut', unredact);
+		window.addEventListener('message', (e) => {
+			if (e.source === window && e.data?.type === 'ai-shield:clipboard-write') {
+				unredact();
+			}
+		});
 
 		document.addEventListener('paste', redact, { capture: true });
 	},

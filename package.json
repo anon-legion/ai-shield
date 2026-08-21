@@ -29,6 +29,7 @@
 	},
 	"dependencies": {
 		"@webext-core/proxy-service": "^2.0.1",
-		"idb": "^8.0.3"
+		"idb": "^8.0.3",
+		"ulid": "^3.0.2"
 	}
 }
