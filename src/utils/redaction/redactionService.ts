@@ -157,8 +157,4 @@ function createRedactionService(_db: Promise<ExtensionDb>): IRedactionService {
 const REDACTION_SERVICE_KEY =
 	'redaction-service' as ProxyServiceKey<IRedactionService>;
 
-export {
-	createRedactionService,
-	type IRedactionService,
-	REDACTION_SERVICE_KEY,
-};
+export { createRedactionService, REDACTION_SERVICE_KEY };

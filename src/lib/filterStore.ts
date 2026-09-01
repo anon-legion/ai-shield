@@ -24,6 +24,4 @@ const filterStore = storage.defineItem<ISerializedFilter[]>('local:filters', {
 	fallback: serializeFilterList(filterDefault),
 });
 
-export type { ISerializedFilter as SerializedFilter };
-
 export { deserializeFilterList, filterStore, serializeFilterList };

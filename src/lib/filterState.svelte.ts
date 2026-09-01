@@ -92,4 +92,4 @@ class FilterState {
 
 const filterState = new FilterState();
 
-export { FilterState, filterState };
+export { filterState };

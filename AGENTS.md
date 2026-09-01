@@ -43,3 +43,52 @@ Root `tsconfig.json` extends `.wxt/tsconfig.json` (generated, gitignored). `bun 
 - Tailwind v4: configured via `@tailwindcss/vite` plugin + `@import "tailwindcss"` in `src/assets/tailwind.css`. No `tailwind.config` file by design.
 - Biome: tabs for indent, single quotes, organize imports on. Formatter normalizes — run `biome format`/`check --write`, don't hand-argue style.
 - Don't add new dependencies for storage/messaging/icon tooling — `idb`, `@webext-core/proxy-service`, `@wxt-dev/auto-icons` already cover it.
+
+## Governance
+
+Project policy, not style preference. These rules bind you as an agent. Contributor-facing
+versions of the same rules are in `CONTRIBUTING.md`.
+
+### Branching
+
+- Check `git branch --show-current` **before making any edit**.
+- Work only on branches matching `agent/<type>/<name>` — e.g. `agent/feat/filter-pdf`,
+  `agent/chore/update-unit-tests`. Types: `feat`, `fix`, `chore`, `docs`, `refactor`, `test`.
+- If the current branch is `main`, `dev`, or lacks the `agent/` prefix: **stop and ask.** Do not
+  create the branch yourself and do not proceed.
+- Never commit to `main` or `dev`. Never push to the `upstream` remote. Never force-push a
+  shared branch.
+- Rebase onto the **local `dev`** branch, never onto `upstream/dev` directly. If local `dev` is
+  behind, fast-forward it first, then rebase the feature branch onto `dev`. Never merge `dev`
+  into a feature branch.
+
+  ```bash
+  git fetch upstream
+  git switch dev && git merge --ff-only upstream/dev
+  git switch agent/feat/my-change && git rebase dev
+  ```
+
+### Pull requests
+
+- **Never open a pull request.** No `gh pr create`, no GitHub API call, no automation that
+  results in a PR. PRs are opened by a human, manually, after they have reviewed and understood
+  every line you wrote. This is a hard rule with no exceptions.
+- Do not ask the user to let you open one. Hand the work back and let them do it.
+- Add a `Co-Authored-By` trailer to commits you author.
+
+### Before handing work back
+
+Run, in order, and report real results — including failures:
+
+```bash
+bunx biome check --write .
+bun run check
+bun run build
+bunx fallow audit --base dev
+```
+
+### Licensing
+
+- The project is **GPL-3.0-or-later**.
+- Do not modify `LICENSE`, do not relicense, do not remove copyright notices.
+- Do not add dependencies under GPL-incompatible terms.

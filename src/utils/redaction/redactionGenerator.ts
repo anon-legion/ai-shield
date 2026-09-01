@@ -18,4 +18,4 @@ function generateRedaction(
 	};
 }
 
-export { generateRedaction, generateUlid };
+export { generateRedaction };

@@ -1,0 +1,9 @@
+{
+	"entry": ["src/entrypoints/**/*.{ts,html}", "wxt.config.ts"],
+	"ignoreDependencies": [
+		"@wxt-dev/module-svelte",
+		"@wxt-dev/auto-icons",
+		"@tsconfig/svelte",
+		"tslib"
+	]
+}
