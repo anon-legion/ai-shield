@@ -77,14 +77,14 @@ Branches are named `<type>/<short-kebab-name>`:
 | `refactor` | Behaviour-preserving restructuring |
 | `test` | Tests only |
 
-Examples: `feat/filter-whitelist`, `fix/redaction-collision`, `chore/update-documentation`.
+Examples: `feat/filter-whitelist`, `fix/redaction-collision`, `chore/update-deps`.
 
 Work produced with an AI agent takes an additional `agent/` prefix — see
 [AI-assisted contributions](#ai-assisted-contributions):
 
 ```
 agent/feat/redact-pdf
-agent/chore/update-unit-tests
+agent/test/update-unit-tests
 ```
 
 ## Workflow
