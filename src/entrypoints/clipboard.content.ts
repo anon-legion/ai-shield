@@ -1,13 +1,10 @@
 export default defineContentScript({
 	matches: ['<all_urls>'],
 	world: 'MAIN',
+	runAt: 'document_start',
 
 	main() {
-		console.log('AI-Shield: Clipboard main script loaded');
-
 		if (!navigator.clipboard) return;
-
-		console.log('AI-Shield: Overriding navigator.clipboard.writeText');
 
 		const notifyClipboardWrite = () => {
 			window.postMessage({ type: 'ai-shield:clipboard-write' }, '*');

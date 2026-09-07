@@ -4,64 +4,109 @@ import type { IRedaction } from '../../models/redaction';
 import { hasUlid, regexUlid } from '../filter/filterUlid';
 import { generateRedaction } from './redactionGenerator';
 import { REDACTION_SERVICE_KEY } from './redactionService';
+import {
+	findMatches,
+	getRedactionsToPersist,
+	redactText,
+	unredactText,
+} from './redactionText';
 
 const redactionService = createProxyService(REDACTION_SERVICE_KEY);
 
-function escapeRegExp(text: string): string {
-	return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
+// keep local mirror of db to make redaction synchronous and finish inside
+// the paste event to prevent race condition with page's own handler
+const redactionByTarget = new Map<string, IRedaction>();
 
-function findMatches(text: string, patterns: RegExp[]): string[] {
-	return patterns.flatMap((regex) => {
-		regex.lastIndex = 0;
-		return [...new Set(text.match(regex) ?? [])];
+redactionService
+	.getAll()
+	.then((redactions) => {
+		redactions.forEach((redaction) => {
+			redactionByTarget.set(redaction.target, redaction);
+		});
+	})
+	.catch((err) => {
+		console.error(`AI-Shield: Failed to warm redaction cache\n${err}`);
 	});
-}
 
-function redactText(text: string, redactions: IRedaction[]): string {
-	if (redactions.length === 0) return text;
-
-	const aliasByTarget = new Map(
-		redactions.map((redaction) => [redaction.target, redaction.alias]),
+function notifyInput(element: HTMLElement): void {
+	element.dispatchEvent(
+		new InputEvent('input', { bubbles: true, inputType: 'insertText' }),
 	);
-
-	const pattern = [...aliasByTarget.keys()]
-		.sort((a, b) => b.length - a.length)
-		.map(escapeRegExp)
-		.join('|');
-
-	const regex = new RegExp(pattern, 'g');
-
-	return text.replace(regex, (match) => `[${aliasByTarget.get(match)}]`);
+	element.dispatchEvent(new Event('change', { bubbles: true }));
 }
 
-function unredactText(text: string, redactions: IRedaction[]): string {
-	console.log('Unredact handler triggered');
-	if (redactions.length === 0) return text;
+function insertIntoFormField(
+	element: HTMLInputElement | HTMLTextAreaElement,
+	text: string,
+): boolean {
+	const prototype =
+		element instanceof HTMLTextAreaElement
+			? HTMLTextAreaElement.prototype
+			: HTMLInputElement.prototype;
 
-	const targetByAlias = new Map(
-		redactions.map((redaction) => [redaction.alias, redaction.target]),
+	// use prototype setter because React based host pages' value shim swallows a plain assignment — a no-op elsewhere
+	const setValue = Object.getOwnPropertyDescriptor(prototype, 'value')?.set;
+
+	if (!setValue) return false;
+
+	const start = element.selectionStart ?? element.value.length;
+	const end = element.selectionEnd ?? start;
+	const caret = start + text.length;
+
+	setValue.call(
+		element,
+		`${element.value.slice(0, start)}${text}${element.value.slice(end)}`,
 	);
+	element.setSelectionRange(caret, caret);
+	notifyInput(element);
 
-	const pattern = [...targetByAlias.keys()]
-		.sort((a, b) => b.length - a.length)
-		.flatMap((alias) => [
-			escapeRegExp(`[**${alias}**]`),
-			escapeRegExp(`[${alias}]`),
-			escapeRegExp(alias),
-		])
-		.join('|');
-
-	const regex = new RegExp(pattern, 'g');
-
-	return text.replace(regex, (match) => {
-		// strip brackets and/or asterisks to extract alias used as key in the map
-		const alias = match.replace(/^\[?\*{0,2}/, '').replace(/\*{0,2}\]?$/, '');
-		return targetByAlias.get(alias) ?? match;
-	});
+	return true;
 }
 
-async function redact(e: ClipboardEvent): Promise<void> {
+function insertIntoEditable(element: HTMLElement, text: string): boolean {
+	const selection = window.getSelection();
+
+	if (!selection?.rangeCount) return false;
+
+	const range = selection.getRangeAt(0);
+
+	// caret drifted out of the editor (e.g. onto a placeholder overlay)
+	if (!element.contains(range.commonAncestorContainer)) return false;
+
+	range.deleteContents();
+
+	const { startContainer, startOffset } = range;
+	let caretNode: Text;
+
+	if (startContainer.nodeType === Node.TEXT_NODE) {
+		// mutate in place so rich editors keep node identity and reconcile
+		caretNode = startContainer as Text;
+		caretNode.data = `${caretNode.data.slice(0, startOffset)}${text}${caretNode.data.slice(startOffset)}`;
+		selection.collapse(caretNode, startOffset + text.length);
+	} else {
+		caretNode = document.createTextNode(text);
+		range.insertNode(caretNode);
+		selection.collapse(caretNode, text.length);
+	}
+
+	notifyInput(element);
+
+	return true;
+}
+
+function insertText(element: HTMLElement, text: string): boolean {
+	const inserted =
+		element instanceof HTMLTextAreaElement ||
+		element instanceof HTMLInputElement
+			? insertIntoFormField(element, text)
+			: insertIntoEditable(element, text);
+
+	// use deprecated execCommand native insert as last resort so blocked paste never loses the user's text
+	return inserted || document.execCommand('insertText', false, text);
+}
+
+// must stay synchronous: preventDefault and the insert have to happen in the same tick as the paste event
+function redact(e: ClipboardEvent): void {
 	const originalText = e.clipboardData?.getData('text/plain') ?? '';
 
 	if (!originalText) return;
@@ -78,49 +123,47 @@ async function redact(e: ClipboardEvent): Promise<void> {
 
 	if (matchedTargets.length < 1) return;
 
-	e.stopPropagation();
+	const element = document.activeElement;
+
+	if (!(element instanceof HTMLElement)) return;
+
 	e.preventDefault();
+	e.stopImmediatePropagation();
 
 	try {
-		const existingRedactions =
-			await redactionService.getManyByTarget(matchedTargets);
-		const existingTargets = new Map(
-			existingRedactions.map((redaction) => [redaction.target, redaction]),
-		);
 		const newRedactions: IRedaction[] = [];
 		const allRedactions = matchedTargets.map((target) => {
-			const existing = existingTargets.get(target);
+			const existing = redactionByTarget.get(target);
+
 			if (existing) return existing;
 
 			const created = generateRedaction({ target, alias: '' });
 			newRedactions.push(created);
+
 			return created;
 		});
 
 		const redactedText = redactText(originalText, allRedactions);
 
-		const selection = window.getSelection();
+		if (!insertText(element, redactedText)) {
+			console.error('AI-Shield: Could not insert redacted text');
+			return;
+		}
 
-		if (!selection) return;
+		// cache and db must agree
+		const persisted = getRedactionsToPersist(redactedText, newRedactions);
 
-		const range = selection.getRangeAt(0);
-		range.deleteContents();
+		if (persisted.length < 1) return;
 
-		const textNode = document.createTextNode(redactedText);
-		range.insertNode(textNode);
+		persisted.forEach((redaction) => {
+			redactionByTarget.set(redaction.target, redaction);
+		});
 
-		range.setStartAfter(textNode);
-		range.setEndAfter(textNode);
-		selection.removeAllRanges();
-		selection.addRange(range);
-
-		if (newRedactions.length < 1) return;
-
-		redactionService.addMany(newRedactions).catch((err) => {
+		redactionService.addMany(persisted).catch((err) => {
 			console.error(`AI-Shield: Failed to persist new redactions\n${err}`);
 		});
 	} catch (err) {
-		console.error(`AI-Shield: Redaction failed\n${err}}`);
+		console.error(`AI-Shield: Redaction failed\n${err}`);
 	}
 }
 

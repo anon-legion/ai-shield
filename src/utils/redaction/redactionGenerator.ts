@@ -1,9 +1,5 @@
-import { ulid } from 'ulid';
-import type { IRedaction, ULID } from '../../models/redaction';
-
-function generateUlid(): ULID {
-	return ulid() as ULID;
-}
+import type { IRedaction } from '../../models/redaction';
+import { generateUlid } from '../ulidGenerator';
 
 function generateRedaction(
 	redaction: Omit<IRedaction, 'id' | 'timestamp'>,

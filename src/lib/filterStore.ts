@@ -22,6 +22,7 @@ function deserializeFilterList(
 
 const filterStore = storage.defineItem<ISerializedFilter[]>('local:filters', {
 	fallback: serializeFilterList(filterDefault),
+	version: 1,
 });
 
 export { deserializeFilterList, filterStore, serializeFilterList };
