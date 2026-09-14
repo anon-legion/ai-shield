@@ -1,5 +1,6 @@
 import { createProxyService } from '@webext-core/proxy-service';
 import { filterState } from '../../lib/filterState.svelte';
+import { autoRedactStore } from '../../lib/settingsStore';
 import type { IRedaction } from '../../models/redaction';
 import { hasUlid, regexUlid } from '../filter/filterUlid';
 import { generateRedaction } from './redactionGenerator';
@@ -16,6 +17,16 @@ const redactionService = createProxyService(REDACTION_SERVICE_KEY);
 // keep local mirror of db to make redaction synchronous and finish inside
 // the paste event to prevent race condition with page's own handler
 const redactionByTarget = new Map<string, IRedaction>();
+
+// pre-warmed like the cache above because redact() must stay synchronous
+let autoRedact = autoRedactStore.fallback;
+
+autoRedactStore.getValue().then((value) => {
+	autoRedact = value;
+});
+autoRedactStore.watch((value) => {
+	autoRedact = value ?? autoRedactStore.fallback;
+});
 
 redactionService
 	.getAll()
@@ -107,6 +118,8 @@ function insertText(element: HTMLElement, text: string): boolean {
 
 // must stay synchronous: preventDefault and the insert have to happen in the same tick as the paste event
 function redact(e: ClipboardEvent): void {
+	if (!autoRedact) return;
+
 	const originalText = e.clipboardData?.getData('text/plain') ?? '';
 
 	if (!originalText) return;

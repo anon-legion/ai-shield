@@ -4,6 +4,7 @@ import { filterDefault } from '@/utils/filter/filterDefault';
 import { generateRedaction } from '@/utils/redaction/redactionGenerator';
 import {
 	boundTarget,
+	countMatches,
 	escapeRegExp,
 	findMatches,
 	redactText,
@@ -105,6 +106,28 @@ describe('findMatches', () => {
 
 		expect(findMatches('1234 5678', [regex])).toEqual(['1234', '5678']);
 		expect(findMatches('1234 5678', [regex])).toEqual(['1234', '5678']);
+	});
+});
+
+describe('countMatches', () => {
+	// the deliberate difference from findMatches: every occurrence counts
+	test('counts repeated occurrences of the same value', () => {
+		expect(countMatches('a@b.com and a@b.com', [/[a-z]+@[a-z.]+/g])).toBe(2);
+	});
+
+	test('sums across multiple patterns', () => {
+		expect(countMatches('abc 123', [/[a-z]+/g, /\d+/g])).toBe(2);
+	});
+
+	test('returns 0 for empty text', () => {
+		expect(countMatches('', [/\d+/g])).toBe(0);
+	});
+
+	test('is repeatable with a stateful global regex', () => {
+		const regex = /\d{4}/g;
+
+		expect(countMatches('1234 5678', [regex])).toBe(2);
+		expect(countMatches('1234 5678', [regex])).toBe(2);
 	});
 });
 

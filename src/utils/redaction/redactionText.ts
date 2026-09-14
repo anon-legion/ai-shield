@@ -18,6 +18,17 @@ function findMatches(text: string, patterns: RegExp[]): string[] {
 	});
 }
 
+// counts every occurrence, unlike findMatches which dedupes per pattern for
+// alias generation — redactText substitutes every occurrence, so the honest
+// "n redactions" number is the total
+function countMatches(text: string, patterns: RegExp[]): number {
+	return patterns.reduce((count, regex) => {
+		regex.lastIndex = 0;
+
+		return count + (text.match(regex)?.length ?? 0);
+	}, 0);
+}
+
 function redactText(text: string, redactions: IRedaction[]): string {
 	if (redactions.length === 0) return text;
 
@@ -76,6 +87,7 @@ function getRedactionsToPersist(
 
 export {
 	boundTarget,
+	countMatches,
 	escapeRegExp,
 	findMatches,
 	getRedactionsToPersist,
