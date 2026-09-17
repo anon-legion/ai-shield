@@ -9,6 +9,7 @@ let target = $state('');
 let caseInsensitive = $state(false);
 let mode = $state<'text' | 'regex'>('text');
 let regexError = $state('');
+let expanded = $state(false);
 
 const addDisabled = $derived(!label.trim() || !target.trim());
 
@@ -40,59 +41,69 @@ function addFilter(): void {
 <section
 	class="flex flex-col gap-1.5 border-t-2 border-rule px-3.5 pt-2.5 pb-3"
 >
-	<h2 class="text-[13px] font-semibold">New filter</h2>
-	<TextInput bind:value={label} placeholder="Label" />
-	<TextInput
-		bind:value={target}
-		placeholder={mode === 'text' ? 'Target text' : 'Regex source, e.g. INV-\\d{6}'}
-		mono
-		oninput={() => (regexError = '')}
-	/>
-	<div class="flex items-center">
-		<label class="flex flex-1 items-center gap-1.5 text-xs text-muted">
-			<input
-				type="checkbox"
-				bind:checked={caseInsensitive}
-				class="size-3.5 accent-enabled"
+	<button
+		type="button"
+		aria-expanded={expanded}
+		onclick={() => (expanded = !expanded)}
+		class="flex cursor-pointer items-center text-[13px] font-semibold"
+	>
+		<span class="flex-1 text-left">New filter</span>
+		<span class="text-muted">{expanded ? '−' : '+'}</span>
+	</button>
+	{#if expanded}
+		<TextInput bind:value={label} placeholder="Label" />
+		<TextInput
+			bind:value={target}
+			placeholder={mode === 'text' ? 'Target text' : 'Regex source, e.g. INV-\\d{6}'}
+			mono
+			oninput={() => (regexError = '')}
+		/>
+		<div class="flex items-center">
+			<label class="flex flex-1 items-center gap-1.5 text-xs text-muted">
+				<input
+					type="checkbox"
+					bind:checked={caseInsensitive}
+					class="size-3.5 accent-enabled"
+				>
+				Case insensitive
+			</label>
+			<div
+				class="flex h-[22px] overflow-hidden rounded-[3px] border border-border text-[11px]"
 			>
-			Case insensitive
-		</label>
-		<div
-			class="flex h-[22px] overflow-hidden rounded-[3px] border border-border text-[11px]"
-		>
-			<button
-				type="button"
-				onclick={() => {
+				<button
+					type="button"
+					onclick={() => {
 					mode = 'text';
 					regexError = '';
 				}}
-				class={[
+					class={[
 					'cursor-pointer px-2',
 					mode === 'text' ? 'bg-border text-fg' : 'text-muted hover:text-fg',
 				]}
-			>
-				Text
-			</button>
-			<button
-				type="button"
-				onclick={() => (mode = 'regex')}
-				class={[
+				>
+					Text
+				</button>
+				<button
+					type="button"
+					onclick={() => (mode = 'regex')}
+					class={[
 					'cursor-pointer px-2 font-mono',
 					mode === 'regex' ? 'bg-border text-fg' : 'text-muted hover:text-fg',
 				]}
-			>
-				.*
-			</button>
+				>
+					.*
+				</button>
+			</div>
 		</div>
-	</div>
-	{#if regexError}
-		<p class="text-[11px] text-danger">{regexError}</p>
+		{#if regexError}
+			<p class="text-[11px] text-danger">{regexError}</p>
+		{/if}
+		<Button
+			onclick={addFilter}
+			disabled={addDisabled}
+			class="h-[30px] px-2 text-left text-[12.5px]"
+		>
+			Add filter
+		</Button>
 	{/if}
-	<Button
-		onclick={addFilter}
-		disabled={addDisabled}
-		class="h-[30px] px-2 text-left text-[12.5px]"
-	>
-		Add filter
-	</Button>
 </section>

@@ -1,7 +1,5 @@
 <script lang="ts">
-import iconUrl from '@/assets/icon.svg';
 import FilterRow from '@/lib/components/FilterRow.svelte';
-import IconButton from '@/lib/components/IconButton.svelte';
 import NewFilterForm from '@/lib/components/NewFilterForm.svelte';
 import Toggle from '@/lib/components/Toggle.svelte';
 import { filterState } from '@/lib/filterState.svelte';
@@ -13,24 +11,6 @@ const autoRedact = storedItem(autoRedactStore);
 const promptMirror = storedItem(promptMirrorStore);
 
 let tab = $state<'redact' | 'extra'>('redact');
-
-const canPin = !!browser.sidePanel?.setPanelBehavior;
-
-let pinned = $state(false);
-
-if (canPin) {
-	browser.sidePanel.getPanelBehavior().then((behavior) => {
-		pinned = behavior.openPanelOnActionClick ?? false;
-	});
-}
-
-async function togglePin(): Promise<void> {
-	await browser.sidePanel.setPanelBehavior({
-		openPanelOnActionClick: !pinned,
-	});
-
-	pinned = !pinned;
-}
 
 const enabledCount = $derived(
 	filterState.state.filter((filter) => filter.isEnabled).length,
@@ -54,29 +34,6 @@ const redactionCount = $derived(
 <div
 	class="flex h-screen flex-col border-l border-rule bg-panel font-sans text-[13px] leading-[1.4] text-fg"
 >
-	<header class="flex items-center gap-2 border-b-2 border-rule px-3.5 py-2.5">
-		<img src={iconUrl} alt="" width="16" height="16">
-		<h1 class="text-sm font-extrabold">AI Shield</h1>
-		<span class="flex-1"></span>
-		{#if canPin}
-			<IconButton
-				name="pin"
-				label={pinned ? 'Unpin from toolbar click' : 'Pin to toolbar click'}
-				size={26}
-				iconSize={14}
-				active={pinned}
-				onclick={togglePin}
-			/>
-		{/if}
-		<IconButton
-			name="x"
-			label="Close panel"
-			size={26}
-			iconSize={14}
-			onclick={() => window.close()}
-		/>
-	</header>
-
 	<nav class="flex gap-4 border-b-2 border-rule px-3.5">
 		{#each [['redact', 'Redact'], ['extra', 'Extra']] as const as [ id, title ] (id)}
 			<button
@@ -140,7 +97,7 @@ const redactionCount = $derived(
 		</section>
 	{:else}
 		<div class="flex flex-1 items-center justify-center text-xs text-muted">
-			Nothing here yet
+			Under development
 		</div>
 	{/if}
 </div>

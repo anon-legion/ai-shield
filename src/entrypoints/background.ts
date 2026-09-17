@@ -22,8 +22,8 @@ export default defineBackground(() => {
 	if (browser.sidePanel) {
 		void browser.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
 	} else {
-		const { sidebarAction, browserAction } =
-			browser as typeof browser & IBrowserWithSidebar;
+		const { sidebarAction, browserAction } = browser as typeof browser &
+			IBrowserWithSidebar;
 
 		if (sidebarAction && browserAction) {
 			browserAction.onClicked.addListener(() => void sidebarAction.toggle());
