@@ -56,7 +56,11 @@ function unredactText(text: string, redactions: IRedaction[]): string {
 	const pattern = [...targetByAlias.keys()]
 		.sort((a, b) => b.length - a.length)
 		.flatMap((alias) => [
+			// markdown-escaped variants first: chatbot "copy" buttons serialize
+			// messages to markdown, turning [alias] into \[alias\]
+			boundTarget(`\\[**${alias}**\\]`),
 			boundTarget(`[**${alias}**]`),
+			boundTarget(`\\[${alias}\\]`),
 			boundTarget(`[${alias}]`),
 			boundTarget(alias),
 		])
@@ -65,8 +69,10 @@ function unredactText(text: string, redactions: IRedaction[]): string {
 	const regex = new RegExp(pattern, 'gu');
 
 	return text.replace(regex, (match) => {
-		// strip brackets and/or asterisks to extract alias used as key in the map
-		const alias = match.replace(/^\[?\*{0,2}/, '').replace(/\*{0,2}\]?$/, '');
+		// strip (escaped) brackets and/or asterisks to extract alias used as key in the map
+		const alias = match
+			.replace(/^\\?\[?\*{0,2}/, '')
+			.replace(/\*{0,2}\\?\]?$/, '');
 		return targetByAlias.get(alias) ?? match;
 	});
 }

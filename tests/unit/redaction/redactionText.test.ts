@@ -189,6 +189,22 @@ describe('unredactText', () => {
 		).toBe('call 0123456789');
 	});
 
+	// chatgpt's copy button serializes the message to markdown, which
+	// escapes brackets: [ALIAS] arrives as \[ALIAS\]
+	test('restores an alias with markdown-escaped brackets', () => {
+		expect(
+			unredactText('call \\[ALIAS1\\]', [redaction('0123456789', 'ALIAS1')]),
+		).toBe('call 0123456789');
+	});
+
+	test('restores a bold alias with markdown-escaped brackets', () => {
+		expect(
+			unredactText('call \\[**ALIAS1**\\]', [
+				redaction('0123456789', 'ALIAS1'),
+			]),
+		).toBe('call 0123456789');
+	});
+
 	test('restores a bare alias', () => {
 		expect(
 			unredactText('call ALIAS1', [redaction('0123456789', 'ALIAS1')]),
