@@ -1,6 +1,6 @@
 <script lang="ts">
 import type { IFilter } from '../../models/filter';
-import { filterState } from '../filterState.svelte';
+import { type FilterState, filterState } from '../filterState.svelte';
 import Button from './Button.svelte';
 import TextInput from './TextInput.svelte';
 
@@ -8,9 +8,10 @@ interface IProps {
 	filter: IFilter;
 	index: number;
 	onclose: () => void;
+	filters?: FilterState;
 }
 
-const { filter, index, onclose }: IProps = $props();
+const { filter, index, onclose, filters = filterState }: IProps = $props();
 
 // deliberate snapshot: the edit buffer seeds from the filter once on mount
 // svelte-ignore state_referenced_locally
@@ -28,7 +29,7 @@ function saveEdit(): void {
 		return;
 	}
 
-	filterState.updateFilter(index, {
+	filters.updateFilter(index, {
 		...filter,
 		label: editLabel.trim() || filter.label,
 		regex,

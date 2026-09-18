@@ -1,8 +1,15 @@
 <script lang="ts">
 import { buildFilterRegex } from '../../utils/filter/filterInput';
-import { filterState } from '../filterState.svelte';
+import { type FilterState, filterState } from '../filterState.svelte';
 import Button from './Button.svelte';
 import TextInput from './TextInput.svelte';
+
+interface IProps {
+	filters?: FilterState;
+	kind?: string;
+}
+
+const { filters = filterState, kind = 'filter' }: IProps = $props();
 
 let label = $state('');
 let target = $state('');
@@ -38,7 +45,7 @@ function addFilter(): void {
 		return;
 	}
 
-	filterState.addFilter({ label: label.trim(), regex, isEnabled: true });
+	filters.addFilter({ label: label.trim(), regex, isEnabled: true });
 
 	label = '';
 	target = '';
@@ -52,7 +59,7 @@ function addFilter(): void {
 		<summary
 			class="flex cursor-pointer list-none items-center text-[13px] font-semibold [&::-webkit-details-marker]:hidden"
 		>
-			<span class="flex-1 text-left">New filter</span>
+			<span class="flex-1 text-left">New {kind}</span>
 			<span class="text-muted group-open:hidden">+</span>
 			<span class="hidden text-muted group-open:inline">−</span>
 		</summary>
@@ -103,7 +110,7 @@ function addFilter(): void {
 				disabled={addDisabled}
 				class="h-7.5 px-2 text-left text-[12.5px]"
 			>
-				Add filter
+				Add {kind}
 			</Button>
 		</div>
 	</details>

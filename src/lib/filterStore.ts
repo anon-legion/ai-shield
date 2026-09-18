@@ -25,4 +25,17 @@ const filterStore = storage.defineItem<ISerializedFilter[]>('local:filters', {
 	version: 1,
 });
 
-export { deserializeFilterList, filterStore, serializeFilterList };
+const whitelistStore = storage.defineItem<ISerializedFilter[]>(
+	'local:whitelist',
+	{
+		fallback: [],
+		version: 1,
+	},
+);
+
+export {
+	deserializeFilterList,
+	filterStore,
+	serializeFilterList,
+	whitelistStore,
+};

@@ -1,6 +1,6 @@
 <script lang="ts">
 import type { IFilter } from '../../models/filter';
-import { filterState } from '../filterState.svelte';
+import { type FilterState, filterState } from '../filterState.svelte';
 import IconButton from './IconButton.svelte';
 
 interface IProps {
@@ -8,9 +8,16 @@ interface IProps {
 	index: number;
 	isCustom: boolean;
 	onedit: () => void;
+	filters?: FilterState;
 }
 
-const { filter, index, isCustom, onedit }: IProps = $props();
+const {
+	filter,
+	index,
+	isCustom,
+	onedit,
+	filters = filterState,
+}: IProps = $props();
 </script>
 
 <span class="min-w-0 flex-1 truncate">{filter.label}</span>
@@ -27,6 +34,6 @@ const { filter, index, isCustom, onedit }: IProps = $props();
 		name="trash"
 		label="Delete filter"
 		danger
-		onclick={() => filterState.removeFilter(index)}
+		onclick={() => filters.removeFilter(index)}
 	/>
 {/if}

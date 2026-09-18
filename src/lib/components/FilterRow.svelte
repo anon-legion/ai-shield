@@ -1,6 +1,6 @@
 <script lang="ts">
 import type { IFilter } from '../../models/filter';
-import { filterState } from '../filterState.svelte';
+import { type FilterState, filterState } from '../filterState.svelte';
 import FilterRowEdit from './FilterRowEdit.svelte';
 import FilterRowView from './FilterRowView.svelte';
 import Icon from './Icon.svelte';
@@ -8,9 +8,10 @@ import Icon from './Icon.svelte';
 interface IProps {
 	filter: IFilter;
 	index: number;
+	filters?: FilterState;
 }
 
-const { filter, index }: IProps = $props();
+const { filter, index, filters = filterState }: IProps = $props();
 
 // ponytail: suffix sniff instead of an isDefault field — avoids a storage
 // migration; add the field when defaults become renamable
@@ -37,18 +38,24 @@ const checkboxClass = $derived(
 			class="sr-only"
 			checked={filter.isEnabled}
 			aria-label={filter.label}
-			onchange={() => filterState.toggleFilter(index)}
+			onchange={() => filters.toggleFilter(index)}
 		>
 		{#if filter.isEnabled}
 			<Icon name="check" size={11} strokeWidth={3.5} />
 		{/if}
 	</label>
 	{#if editing}
-		<FilterRowEdit {filter} {index} onclose={() => (editing = false)} />
+		<FilterRowEdit
+			{filter}
+			{index}
+			{filters}
+			onclose={() => (editing = false)}
+		/>
 	{:else}
 		<FilterRowView
 			{filter}
 			{index}
+			{filters}
 			{isCustom}
 			onedit={() => (editing = true)}
 		/>

@@ -3,16 +3,21 @@ import {
 	deserializeFilterList,
 	filterStore,
 	serializeFilterList,
+	whitelistStore,
 } from './filterStore';
 
 class FilterState {
-	state = $state<IFilter[]>(deserializeFilterList(filterStore.fallback));
+	#store: typeof filterStore;
+
+	state = $state<IFilter[]>([]);
 
 	#skipNextUpdate = false;
 
-	constructor() {
-		filterStore.getValue().then(this.updateState);
-		filterStore.watch(this.updateState); // for external change to store
+	constructor(store: typeof filterStore) {
+		this.#store = store;
+		this.state = deserializeFilterList(store.fallback);
+		store.getValue().then(this.updateState);
+		store.watch(this.updateState); // for external change to store
 	}
 
 	updateState = (serialized: ISerializedFilter[] | null): void => {
@@ -23,16 +28,16 @@ class FilterState {
 		}
 
 		const filterList = deserializeFilterList(
-			serialized ?? filterStore.fallback,
+			serialized ?? this.#store.fallback,
 		);
 
 		this.state = filterList;
 	};
 
 	async #persist(): Promise<void> {
-		this.#skipNextUpdate = true; // suppress updateState call by filterStore.watch() triggered by setValue()
+		this.#skipNextUpdate = true; // suppress updateState call by the store's watch() triggered by setValue()
 
-		await filterStore.setValue(serializeFilterList(this.state));
+		await this.#store.setValue(serializeFilterList(this.state));
 	}
 
 	async addFilter(filter: IFilter): Promise<boolean> {
@@ -110,6 +115,7 @@ class FilterState {
 	}
 }
 
-const filterState = new FilterState();
+const filterState = new FilterState(filterStore);
+const whitelistState = new FilterState(whitelistStore);
 
-export { filterState };
+export { FilterState, filterState, whitelistState };

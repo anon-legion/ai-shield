@@ -1,3 +1,4 @@
+import type { IFilter } from '../../models/filter';
 import { escapeRegExp } from '../redaction/redactionText';
 
 // throws on invalid regex source — caller catches and surfaces the message
@@ -11,4 +12,14 @@ function buildFilterRegex(
 	return new RegExp(source, `g${caseInsensitive ? 'i' : ''}`);
 }
 
-export { buildFilterRegex };
+function enabledPatterns(filters: IFilter[]): RegExp[] {
+	return filters
+		.filter((filter) => filter.isEnabled)
+		.map((filter) =>
+			filter.regex.global
+				? filter.regex
+				: new RegExp(filter.regex.source, `${filter.regex.flags}g`),
+		);
+}
+
+export { buildFilterRegex, enabledPatterns };

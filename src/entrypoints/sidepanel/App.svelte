@@ -1,19 +1,14 @@
 <script lang="ts">
-import FilterRow from '@/lib/components/FilterRow.svelte';
-import NewFilterForm from '@/lib/components/NewFilterForm.svelte';
+import FilterSection from '@/lib/components/FilterSection.svelte';
 import PromptSection from '@/lib/components/PromptSection.svelte';
 import Toggle from '@/lib/components/Toggle.svelte';
-import { filterState } from '@/lib/filterState.svelte';
+import { filterState, whitelistState } from '@/lib/filterState.svelte';
 import { autoRedactStore } from '@/lib/settingsStore';
 import { storedItem } from '@/lib/storedItem.svelte';
 
 const autoRedact = storedItem(autoRedactStore);
 
 let tab = $state<'redact' | 'extra'>('redact');
-
-const enabledCount = $derived(
-	filterState.state.filter((filter) => filter.isEnabled).length,
-);
 
 function tabClass(active: boolean): string {
 	return active
@@ -50,20 +45,13 @@ function tabClass(active: boolean): string {
 			/>
 		</section>
 
-		<div class="flex items-baseline px-3.5 pt-3 pb-1.5">
-			<h2 class="flex-1 font-semibold">Filters</h2>
-			<span class="text-[11px] whitespace-nowrap text-muted">
-				{enabledCount}
-				of {filterState.state.length} active
-			</span>
-		</div>
-		<div class="min-h-0 flex-1 overflow-y-auto px-3.5">
-			{#each filterState.state as filter, index (filter)}
-				<FilterRow {filter} {index} />
-			{/each}
-		</div>
-
-		<NewFilterForm />
+		<FilterSection title="Filter" kind="filter" filters={filterState} open />
+		<FilterSection
+			title="White list"
+			kind="white list"
+			filters={whitelistState}
+			bordered
+		/>
 
 		<PromptSection />
 	{:else}
