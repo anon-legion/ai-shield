@@ -1,0 +1,110 @@
+<script lang="ts">
+import { buildFilterRegex } from '../../utils/filter/filterInput';
+import { filterState } from '../filterState.svelte';
+import Button from './Button.svelte';
+import TextInput from './TextInput.svelte';
+
+let label = $state('');
+let target = $state('');
+let caseInsensitive = $state(false);
+let mode = $state<'text' | 'regex'>('text');
+let regexError = $state('');
+
+const addDisabled = $derived(!label.trim() || !target.trim());
+
+const targetPlaceholder = $derived(
+	mode === 'text' ? 'Target text' : 'Regex source, e.g. INV-\\d{6}',
+);
+
+function segmentClass(active: boolean): string {
+	return active
+		? 'cursor-pointer px-2 bg-border text-fg'
+		: 'cursor-pointer px-2 text-muted hover:text-fg';
+}
+
+function addFilter(): void {
+	if (addDisabled) return;
+
+	let regex: RegExp;
+
+	try {
+		regex = buildFilterRegex(target, mode, caseInsensitive);
+	} catch (err) {
+		regexError = `Invalid regex: ${(err as Error).message.replace(
+			/^Invalid regular expression: /,
+			'',
+		)}`;
+
+		return;
+	}
+
+	filterState.addFilter({ label: label.trim(), regex, isEnabled: true });
+
+	label = '';
+	target = '';
+	caseInsensitive = false;
+	regexError = '';
+}
+</script>
+
+<section class="border-t-2 border-rule px-3.5 pt-2.5 pb-3">
+	<details class="group flex flex-col gap-1.5">
+		<summary
+			class="flex cursor-pointer list-none items-center text-[13px] font-semibold [&::-webkit-details-marker]:hidden"
+		>
+			<span class="flex-1 text-left">New filter</span>
+			<span class="text-muted group-open:hidden">+</span>
+			<span class="hidden text-muted group-open:inline">−</span>
+		</summary>
+		<div class="mt-1.5 flex flex-col gap-1.5">
+			<TextInput bind:value={label} placeholder="Label" />
+			<TextInput
+				bind:value={target}
+				placeholder={targetPlaceholder}
+				mono
+				oninput={() => (regexError = '')}
+			/>
+			<div class="flex items-center">
+				<label class="flex flex-1 items-center gap-1.5 text-xs text-muted">
+					<input
+						type="checkbox"
+						bind:checked={caseInsensitive}
+						class="size-3.5 accent-enabled"
+					>
+					Case insensitive
+				</label>
+				<div
+					class="flex h-5.5 overflow-hidden rounded-[3px] border border-border text-[11px]"
+				>
+					<button
+						type="button"
+						onclick={() => {
+							mode = 'text';
+							regexError = '';
+						}}
+						class={segmentClass(mode === 'text')}
+					>
+						Text
+					</button>
+					<button
+						type="button"
+						onclick={() => (mode = 'regex')}
+						class={['font-mono', segmentClass(mode === 'regex')]}
+					>
+						.*
+					</button>
+				</div>
+			</div>
+			{#if regexError}
+				<p class="text-[11px] text-danger">{regexError}</p>
+			{/if}
+			<Button
+				onclick={addFilter}
+				disabled={addDisabled}
+				class="h-7.5 px-2 text-left text-[12.5px]"
+			>
+				Add filter
+			</Button>
+		</div>
+	</details>
+</section>
