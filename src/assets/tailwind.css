@@ -1,1 +1,54 @@
 @import "tailwindcss";
+
+@font-face {
+	font-family: Archivo;
+	font-weight: 400;
+	font-display: swap;
+	src: url("/fonts/archivo-400.woff2") format("woff2");
+}
+
+@font-face {
+	font-family: Archivo;
+	font-weight: 600;
+	font-display: swap;
+	src: url("/fonts/archivo-600.woff2") format("woff2");
+}
+
+@font-face {
+	font-family: Archivo;
+	font-weight: 800;
+	font-display: swap;
+	src: url("/fonts/archivo-800.woff2") format("woff2");
+}
+
+@font-face {
+	font-family: "JetBrains Mono";
+	font-weight: 400;
+	font-display: swap;
+	src: url("/fonts/jetbrains-mono-400.woff2") format("woff2");
+}
+
+@theme {
+	--font-sans: Archivo, system-ui, sans-serif;
+	--font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+	--color-panel: light-dark(#f9f5d7, #1d2021);
+	--color-surface: light-dark(#fbf1c7, #282828);
+	--color-rule: light-dark(#ebdbb2, #3c3836);
+	--color-border: light-dark(#d5c4a1, #504945);
+	--color-unchecked: light-dark(#bdae93, #665c54);
+	--color-fg: light-dark(#3c3836, #ebdbb2);
+	--color-muted: light-dark(#7c6f64, #a89984);
+	--color-faint: #928374;
+	--color-primary: light-dark(#b57614, #fabd2f);
+	--color-primary-hover: light-dark(#8f5a0f, #d79921);
+	--color-enabled: light-dark(#79740e, #b8bb26);
+	--color-custom: light-dark(#af3a03, #fe8019);
+	--color-danger: light-dark(#9d0006, #fb4934);
+}
+
+@layer base {
+	:root {
+		color-scheme: light dark;
+	}
+}

@@ -11,6 +11,10 @@ export default defineConfig({
 	},
 	manifest: {
 		permissions: ['clipboardRead', 'clipboardWrite', 'storage'],
+		// no popup: the toolbar icon opens the side panel (see background.ts)
+		action: {
+			default_title: 'AI Shield',
+		},
 	},
 	vite: () => ({
 		plugins: [tailwindcss()],

@@ -69,6 +69,26 @@ class FilterState {
 		}
 	}
 
+	async updateFilter(index: number, filter: IFilter): Promise<boolean> {
+		try {
+			const state = [...this.state];
+
+			if (!state[index]) return false;
+
+			state[index] = filter;
+
+			this.state = state;
+
+			await this.#persist();
+
+			return true;
+		} catch (err) {
+			console.error(err);
+
+			return false;
+		}
+	}
+
 	async toggleFilter(index: number): Promise<boolean> {
 		try {
 			const state = [...this.state];

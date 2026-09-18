@@ -1,9 +1,12 @@
+import { AI_MATCH_PATTERNS, isAiSite } from '../utils/aiSites';
+
 export default defineContentScript({
-	matches: ['<all_urls>'],
+	matches: AI_MATCH_PATTERNS,
 	world: 'MAIN',
 	runAt: 'document_start',
 
 	main() {
+		if (!isAiSite(location.hostname, location.pathname)) return;
 		if (!navigator.clipboard) return;
 
 		const notifyClipboardWrite = () => {

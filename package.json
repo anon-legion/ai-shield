@@ -1,9 +1,9 @@
 {
-	"name": "wxt-svelte-starter",
+	"name": "AI Shield",
 	"description": "manifest.json description",
 	"private": true,
 	"license": "GPL-3.0-or-later",
-	"version": "0.0.0",
+	"version": "0.1.0",
 	"type": "module",
 	"scripts": {
 		"dev": "wxt",
@@ -33,6 +33,7 @@
 	},
 	"dependencies": {
 		"@webext-core/proxy-service": "^2.0.1",
+		"@wxt-dev/storage": "^1.2.9",
 		"idb": "^8.0.3",
 		"ulid": "^3.0.2"
 	}

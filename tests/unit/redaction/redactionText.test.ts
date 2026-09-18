@@ -4,6 +4,7 @@ import { filterDefault } from '@/utils/filter/filterDefault';
 import { generateRedaction } from '@/utils/redaction/redactionGenerator';
 import {
 	boundTarget,
+	countMatches,
 	escapeRegExp,
 	findMatches,
 	redactText,
@@ -108,6 +109,28 @@ describe('findMatches', () => {
 	});
 });
 
+describe('countMatches', () => {
+	// the deliberate difference from findMatches: every occurrence counts
+	test('counts repeated occurrences of the same value', () => {
+		expect(countMatches('a@b.com and a@b.com', [/[a-z]+@[a-z.]+/g])).toBe(2);
+	});
+
+	test('sums across multiple patterns', () => {
+		expect(countMatches('abc 123', [/[a-z]+/g, /\d+/g])).toBe(2);
+	});
+
+	test('returns 0 for empty text', () => {
+		expect(countMatches('', [/\d+/g])).toBe(0);
+	});
+
+	test('is repeatable with a stateful global regex', () => {
+		const regex = /\d{4}/g;
+
+		expect(countMatches('1234 5678', [regex])).toBe(2);
+		expect(countMatches('1234 5678', [regex])).toBe(2);
+	});
+});
+
 describe('redactText', () => {
 	test('returns the input unchanged when there are no redactions', () => {
 		expect(redactText('untouched', [])).toBe('untouched');
@@ -163,6 +186,22 @@ describe('unredactText', () => {
 	test('restores an alias wrapped in markdown bold', () => {
 		expect(
 			unredactText('call [**ALIAS1**]', [redaction('0123456789', 'ALIAS1')]),
+		).toBe('call 0123456789');
+	});
+
+	// chatgpt's copy button serializes the message to markdown, which
+	// escapes brackets: [ALIAS] arrives as \[ALIAS\]
+	test('restores an alias with markdown-escaped brackets', () => {
+		expect(
+			unredactText('call \\[ALIAS1\\]', [redaction('0123456789', 'ALIAS1')]),
+		).toBe('call 0123456789');
+	});
+
+	test('restores a bold alias with markdown-escaped brackets', () => {
+		expect(
+			unredactText('call \\[**ALIAS1**\\]', [
+				redaction('0123456789', 'ALIAS1'),
+			]),
 		).toBe('call 0123456789');
 	});
 

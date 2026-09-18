@@ -1,10 +1,9 @@
 import { mount } from 'svelte';
-import App from './App.svelte';
-import './app.css';
 import '@/assets/tailwind.css';
+import App from './App.svelte';
 
 const target = document.getElementById('app');
-if (!target) throw new Error('popup mount target #app not found');
+if (!target) throw new Error('sidepanel mount target #app not found');
 
 const app = mount(App, { target });
 

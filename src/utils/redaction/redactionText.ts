@@ -18,6 +18,17 @@ function findMatches(text: string, patterns: RegExp[]): string[] {
 	});
 }
 
+// counts every occurrence, unlike findMatches which dedupes per pattern for
+// alias generation — redactText substitutes every occurrence, so the honest
+// "n redactions" number is the total
+function countMatches(text: string, patterns: RegExp[]): number {
+	return patterns.reduce((count, regex) => {
+		regex.lastIndex = 0;
+
+		return count + (text.match(regex)?.length ?? 0);
+	}, 0);
+}
+
 function redactText(text: string, redactions: IRedaction[]): string {
 	if (redactions.length === 0) return text;
 
@@ -45,7 +56,11 @@ function unredactText(text: string, redactions: IRedaction[]): string {
 	const pattern = [...targetByAlias.keys()]
 		.sort((a, b) => b.length - a.length)
 		.flatMap((alias) => [
+			// markdown-escaped variants first: chatbot "copy" buttons serialize
+			// messages to markdown, turning [alias] into \[alias\]
+			boundTarget(`\\[**${alias}**\\]`),
 			boundTarget(`[**${alias}**]`),
+			boundTarget(`\\[${alias}\\]`),
 			boundTarget(`[${alias}]`),
 			boundTarget(alias),
 		])
@@ -54,8 +69,10 @@ function unredactText(text: string, redactions: IRedaction[]): string {
 	const regex = new RegExp(pattern, 'gu');
 
 	return text.replace(regex, (match) => {
-		// strip brackets and/or asterisks to extract alias used as key in the map
-		const alias = match.replace(/^\[?\*{0,2}/, '').replace(/\*{0,2}\]?$/, '');
+		// strip (escaped) brackets and/or asterisks to extract alias used as key in the map
+		const alias = match
+			.replace(/^\\?\[?\*{0,2}/, '')
+			.replace(/\*{0,2}\\?\]?$/, '');
 		return targetByAlias.get(alias) ?? match;
 	});
 }
@@ -76,6 +93,7 @@ function getRedactionsToPersist(
 
 export {
 	boundTarget,
+	countMatches,
 	escapeRegExp,
 	findMatches,
 	getRedactionsToPersist,
