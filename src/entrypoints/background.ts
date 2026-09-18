@@ -12,23 +12,28 @@ interface IBrowserWithSidebar {
 	};
 }
 
+// open the side panel from the toolbar icon; chrome via panel behavior,
+// firefox via sidebarAction toggle
+function enableToolbarSidePanel(): void {
+	if (browser.sidePanel) {
+		void browser.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
+		return;
+	}
+
+	const { sidebarAction, browserAction } = browser as typeof browser &
+		IBrowserWithSidebar;
+
+	if (sidebarAction && browserAction) {
+		browserAction.onClicked.addListener(() => void sidebarAction.toggle());
+	}
+}
+
 export default defineBackground(() => {
 	void browser.storage.local.setAccessLevel?.({
 		accessLevel: 'TRUSTED_AND_UNTRUSTED_CONTEXTS',
 	});
 
-	// open the side panel from the toolbar icon; chrome via panel behavior,
-	// firefox via sidebarAction toggle
-	if (browser.sidePanel) {
-		void browser.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
-	} else {
-		const { sidebarAction, browserAction } = browser as typeof browser &
-			IBrowserWithSidebar;
-
-		if (sidebarAction && browserAction) {
-			browserAction.onClicked.addListener(() => void sidebarAction.toggle());
-		}
-	}
+	enableToolbarSidePanel();
 
 	const redactionService = createRedactionService(openExtensionDb());
 

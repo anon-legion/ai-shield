@@ -11,15 +11,19 @@ const DEBOUNCE_MS = 300;
 let timer: ReturnType<typeof setTimeout> | undefined;
 let lastPushed: string | undefined;
 
+function isTextField(
+	element: Element | null,
+): element is HTMLTextAreaElement | HTMLInputElement {
+	return (
+		element instanceof HTMLTextAreaElement ||
+		element instanceof HTMLInputElement
+	);
+}
+
 function readEditableText(): string | null {
 	const element = document.activeElement;
 
-	if (
-		element instanceof HTMLTextAreaElement ||
-		element instanceof HTMLInputElement
-	) {
-		return element.value;
-	}
+	if (isTextField(element)) return element.value;
 
 	if (element instanceof HTMLElement && element.isContentEditable) {
 		return element.innerText;

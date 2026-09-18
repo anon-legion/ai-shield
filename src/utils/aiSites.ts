@@ -38,4 +38,4 @@ function isAiSite(hostname: string, pathname = '/'): boolean {
 	);
 }
 
-export { AI_HOSTS, AI_MATCH_PATTERNS, isAiSite };
+export { AI_MATCH_PATTERNS, isAiSite };

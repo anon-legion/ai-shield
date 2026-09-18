@@ -12,6 +12,16 @@ let regexError = $state('');
 
 const addDisabled = $derived(!label.trim() || !target.trim());
 
+const targetPlaceholder = $derived(
+	mode === 'text' ? 'Target text' : 'Regex source, e.g. INV-\\d{6}',
+);
+
+function segmentClass(active: boolean): string {
+	return active
+		? 'cursor-pointer px-2 bg-border text-fg'
+		: 'cursor-pointer px-2 text-muted hover:text-fg';
+}
+
 function addFilter(): void {
 	if (addDisabled) return;
 
@@ -50,7 +60,7 @@ function addFilter(): void {
 			<TextInput bind:value={label} placeholder="Label" />
 			<TextInput
 				bind:value={target}
-				placeholder={mode === 'text' ? 'Target text' : 'Regex source, e.g. INV-\\d{6}'}
+				placeholder={targetPlaceholder}
 				mono
 				oninput={() => (regexError = '')}
 			/>
@@ -69,23 +79,17 @@ function addFilter(): void {
 					<button
 						type="button"
 						onclick={() => {
-					mode = 'text';
-					regexError = '';
-				}}
-						class={[
-					'cursor-pointer px-2',
-					mode === 'text' ? 'bg-border text-fg' : 'text-muted hover:text-fg',
-				]}
+							mode = 'text';
+							regexError = '';
+						}}
+						class={segmentClass(mode === 'text')}
 					>
 						Text
 					</button>
 					<button
 						type="button"
 						onclick={() => (mode = 'regex')}
-						class={[
-					'cursor-pointer px-2 font-mono',
-					mode === 'regex' ? 'bg-border text-fg' : 'text-muted hover:text-fg',
-				]}
+						class={['font-mono', segmentClass(mode === 'regex')]}
 					>
 						.*
 					</button>

@@ -1,14 +1,13 @@
 <script lang="ts">
 import FilterRow from '@/lib/components/FilterRow.svelte';
 import NewFilterForm from '@/lib/components/NewFilterForm.svelte';
+import PromptSection from '@/lib/components/PromptSection.svelte';
 import Toggle from '@/lib/components/Toggle.svelte';
 import { filterState } from '@/lib/filterState.svelte';
-import { autoRedactStore, promptMirrorStore } from '@/lib/settingsStore';
+import { autoRedactStore } from '@/lib/settingsStore';
 import { storedItem } from '@/lib/storedItem.svelte';
-import { countMatches } from '@/utils/redaction/redactionText';
 
 const autoRedact = storedItem(autoRedactStore);
-const promptMirror = storedItem(promptMirrorStore);
 
 let tab = $state<'redact' | 'extra'>('redact');
 
@@ -16,19 +15,11 @@ const enabledCount = $derived(
 	filterState.state.filter((filter) => filter.isEnabled).length,
 );
 
-const enabledPatterns = $derived(
-	filterState.state
-		.filter((filter) => filter.isEnabled)
-		.map((filter) =>
-			filter.regex.global
-				? filter.regex
-				: new RegExp(filter.regex.source, `${filter.regex.flags}g`),
-		),
-);
-
-const redactionCount = $derived(
-	countMatches(promptMirror.value, enabledPatterns),
-);
+function tabClass(active: boolean): string {
+	return active
+		? '-mb-[2px] h-[34px] cursor-pointer border-b-2 font-semibold border-primary text-fg'
+		: '-mb-[2px] h-[34px] cursor-pointer border-b-2 font-semibold border-transparent text-muted hover:text-fg';
+}
 </script>
 
 <div
@@ -39,12 +30,7 @@ const redactionCount = $derived(
 			<button
 				type="button"
 				onclick={() => (tab = id)}
-				class={[
-					'-mb-[2px] h-[34px] cursor-pointer border-b-2 font-semibold',
-					tab === id
-						? 'border-primary text-fg'
-						: 'border-transparent text-muted hover:text-fg',
-				]}
+				class={tabClass(tab === id)}
 			>
 				{title}
 			</button>
@@ -79,22 +65,7 @@ const redactionCount = $derived(
 
 		<NewFilterForm />
 
-		<section class="border-t-2 border-rule bg-surface px-3.5 pt-2.5 pb-3">
-			<div class="flex items-baseline">
-				<h2 class="flex-1 font-semibold">Prompt</h2>
-				<span class="text-[11px] text-muted">
-					<span class="font-semibold text-primary">{redactionCount}</span>
-					{redactionCount === 1 ? 'redaction' : 'redactions'}
-				</span>
-			</div>
-			<textarea
-				disabled
-				readonly
-				value={promptMirror.value}
-				class="mt-1.5 h-[112px] w-full resize-none rounded-[3px] border border-rule bg-panel p-2 text-xs leading-[1.45] text-muted outline-none"
-			></textarea>
-			<p class="text-[11px] text-faint">Mirrors the chatbox, unredacted.</p>
-		</section>
+		<PromptSection />
 	{:else}
 		<div class="flex flex-1 items-center justify-center text-xs text-muted">
 			Under development
