@@ -1,6 +1,19 @@
-# WXT + Svelte
+# AI Shield
 
-This template should help get you started developing with Svelte in WXT.
+Browser extension that redacts sensitive text pasted into AI chat sites and restores it when
+you copy the response. Everything runs locally; see [PRIVACY.md](PRIVACY.md).
+
+## Build from source
+
+Requirements: [Bun](https://bun.sh) 1.4.2 and Node.js 25.1.0 (Linux, macOS or Windows).
+
+```bash
+bun install --frozen-lockfile   # also runs `wxt prepare`
+bun run zip:firefox             # Firefox: .output/ai-shield-<version>-firefox.zip
+bun run zip                     # Chrome:  .output/ai-shield-<version>-chrome.zip
+```
+
+The unpacked Firefox build is in `.output/firefox-mv2/`, Chrome in `.output/chrome-mv3/`.
 
 ## Recommended IDE Setup
 

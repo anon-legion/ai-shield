@@ -1,4 +1,5 @@
-@import "tailwindcss";
+/* scan src/ only, so the AMO sources zip rebuilds byte-identical CSS */
+@import "tailwindcss" source("..");
 
 @font-face {
 	font-family: Archivo;
