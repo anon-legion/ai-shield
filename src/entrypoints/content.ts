@@ -1,4 +1,4 @@
-import { MenuId } from '../models/redaction';
+import { MenuId, RESTORE_MESSAGE } from '../models/redaction';
 import { AI_MATCH_PATTERNS, isAiSite } from '../utils/aiSites';
 import { initPromptMirror } from '../utils/promptMirror';
 import {
@@ -7,6 +7,10 @@ import {
 	unredact,
 	whitelistSelection,
 } from '../utils/redaction/redactionHandler';
+import {
+	initRedactionOverlay,
+	restoreRedaction,
+} from '../utils/redaction/redactionOverlay';
 
 export default defineContentScript({
 	matches: AI_MATCH_PATTERNS,
@@ -16,6 +20,7 @@ export default defineContentScript({
 		if (!isAiSite(location.hostname, location.pathname)) return;
 
 		initPromptMirror();
+		initRedactionOverlay();
 
 		document.addEventListener('copy', unredact);
 		document.addEventListener('cut', unredact);
@@ -31,6 +36,11 @@ export default defineContentScript({
 		browser.runtime.onMessage.addListener((message) => {
 			if (message?.type === MenuId.Redact) redactSelection();
 			if (message?.type === MenuId.Whitelist) void whitelistSelection();
+
+			// x on a highlighted span in the sidepanel prompt mirror
+			if (message?.type === RESTORE_MESSAGE) {
+				void restoreRedaction(message.alias, message.nth ?? 0);
+			}
 		});
 	},
 });

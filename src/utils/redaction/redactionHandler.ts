@@ -283,4 +283,11 @@ async function whitelistSelection(): Promise<void> {
 	}
 }
 
-export { redact, redactSelection, unredact, whitelistSelection };
+export {
+	insertText,
+	isTextField,
+	redact,
+	redactSelection,
+	unredact,
+	whitelistSelection,
+};

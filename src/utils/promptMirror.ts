@@ -2,7 +2,7 @@ import { createProxyService } from '@webext-core/proxy-service';
 import { promptMirrorStore } from '../lib/settingsStore';
 import { hasUlid, regexUlid } from './filter/filterUlid';
 import { REDACTION_SERVICE_KEY } from './redaction/redactionService';
-import { findMatches, unredactText } from './redaction/redactionText';
+import { findMatches, splitRedactions } from './redaction/redactionText';
 
 const redactionService = createProxyService(REDACTION_SERVICE_KEY);
 
@@ -34,20 +34,18 @@ function readEditableText(): string | null {
 
 async function push(text: string): Promise<void> {
 	try {
-		let unredacted = text;
+		const redactions = hasUlid(text)
+			? await redactionService.getManyByAlias(findMatches(text, [regexUlid]))
+			: [];
 
-		if (hasUlid(text)) {
-			const aliases = findMatches(text, [regexUlid]);
-			const redactions = await redactionService.getManyByAlias(aliases);
+		const segments = splitRedactions(text, redactions);
+		const serialized = JSON.stringify(segments);
 
-			unredacted = unredactText(text, redactions);
-		}
+		if (serialized === lastPushed) return;
 
-		if (unredacted === lastPushed) return;
+		lastPushed = serialized;
 
-		lastPushed = unredacted;
-
-		await promptMirrorStore.setValue(unredacted);
+		await promptMirrorStore.setValue(segments);
 	} catch (err) {
 		console.error(`AI-Shield: Failed to mirror prompt\n${err}`);
 	}

@@ -1,4 +1,4 @@
-import type { IRedaction } from '../../models/redaction';
+import type { IPromptSegment, IRedaction } from '../../models/redaction';
 
 function escapeRegExp(text: string): string {
 	return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -16,17 +16,6 @@ function findMatches(text: string, patterns: RegExp[]): string[] {
 		regex.lastIndex = 0;
 		return [...new Set(text.match(regex) ?? [])];
 	});
-}
-
-// counts every occurrence, unlike findMatches which dedupes per pattern for
-// alias generation — redactText substitutes every occurrence, so the honest
-// "n redactions" number is the total
-function countMatches(text: string, patterns: RegExp[]): number {
-	return patterns.reduce((count, regex) => {
-		regex.lastIndex = 0;
-
-		return count + (text.match(regex)?.length ?? 0);
-	}, 0);
 }
 
 // a whitelist pattern matching anywhere in the target exempts
@@ -61,8 +50,14 @@ function redactText(text: string, redactions: IRedaction[]): string {
 	return text.replace(regex, (match) => `[${aliasByTarget.get(match)}]`);
 }
 
-function unredactText(text: string, redactions: IRedaction[]): string {
-	if (redactions.length === 0) return text;
+// cuts text into plain runs and restored spans, so callers can tell which
+// parts were placeholders; unredactText is the same walk joined back together
+function splitRedactions(
+	text: string,
+	redactions: IRedaction[],
+): IPromptSegment[] {
+	if (!text) return [];
+	if (redactions.length === 0) return [{ text }];
 
 	const targetByAlias = new Map(
 		redactions.map((redaction) => [redaction.alias, redaction.target]),
@@ -83,13 +78,41 @@ function unredactText(text: string, redactions: IRedaction[]): string {
 
 	const regex = new RegExp(pattern, 'gu');
 
-	return text.replace(regex, (match) => {
+	const segments: IPromptSegment[] = [];
+	const seenByAlias = new Map<string, number>();
+	let plainStart = 0;
+
+	for (const match of text.matchAll(regex)) {
 		// strip (escaped) brackets and/or asterisks to extract alias used as key in the map
-		const alias = match
+		const alias = match[0]
 			.replace(/^\\?\[?\*{0,2}/, '')
 			.replace(/\*{0,2}\\?\]?$/, '');
-		return targetByAlias.get(alias) ?? match;
-	});
+		const target = targetByAlias.get(alias);
+
+		if (target === undefined) continue;
+
+		if (match.index > plainStart) {
+			segments.push({ text: text.slice(plainStart, match.index) });
+		}
+
+		const nth = seenByAlias.get(alias) ?? 0;
+
+		seenByAlias.set(alias, nth + 1);
+		segments.push({ text: target, alias, nth });
+		plainStart = match.index + match[0].length;
+	}
+
+	if (plainStart < text.length) {
+		segments.push({ text: text.slice(plainStart) });
+	}
+
+	return segments;
+}
+
+function unredactText(text: string, redactions: IRedaction[]): string {
+	return splitRedactions(text, redactions)
+		.map((segment) => segment.text)
+		.join('');
 }
 
 // filters run independently, so one span can yield several overlapping targets
@@ -109,10 +132,10 @@ function getRedactionsToPersist(
 export {
 	applyWhitelist,
 	boundTarget,
-	countMatches,
 	escapeRegExp,
 	findMatches,
 	getRedactionsToPersist,
 	redactText,
+	splitRedactions,
 	unredactText,
 };
