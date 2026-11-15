@@ -2,7 +2,7 @@ import { createProxyService } from '@webext-core/proxy-service';
 import { filterState, whitelistState } from '../../lib/filterState.svelte';
 import { autoRedactStore } from '../../lib/settingsStore';
 import type { IRedaction } from '../../models/redaction';
-import { enabledPatterns } from '../filter/filterInput';
+import { buildFilterRegex, enabledPatterns } from '../filter/filterInput';
 import { hasUlid, regexUlid } from '../filter/filterUlid';
 import { generateRedaction } from './redactionGenerator';
 import { REDACTION_SERVICE_KEY } from './redactionService';
@@ -197,4 +197,90 @@ function unredact(): void {
 	}, 0);
 }
 
-export { redact, unredact };
+function isTextField(
+	element: Element | null,
+): element is HTMLTextAreaElement | HTMLInputElement {
+	return (
+		element instanceof HTMLTextAreaElement ||
+		element instanceof HTMLInputElement
+	);
+}
+
+// read from the dom, not the menu's selectionText: chrome normalizes its
+// whitespace, and firefox getSelection() is empty inside form fields
+function readSelection(element: Element | null): string {
+	if (isTextField(element)) {
+		return element.value.slice(
+			element.selectionStart ?? 0,
+			element.selectionEnd ?? 0,
+		);
+	}
+
+	return window.getSelection()?.toString() ?? '';
+}
+
+// manual redaction of the selected chatbox text, no filter rule involved
+function redactSelection(): void {
+	const element = document.activeElement;
+
+	// only inside an editable: with focus elsewhere (e.g. body) the insert
+	// would delete selected page content
+	if (!(element instanceof HTMLElement)) return;
+	if (!isTextField(element) && !element.isContentEditable) return;
+
+	const target = readSelection(element);
+
+	// nothing to redact, or already (partly) a placeholder
+	if (!target.trim() || hasUlid(target)) return;
+
+	const existing = redactionByTarget.get(target);
+	const redaction = existing ?? generateRedaction({ target, alias: '' });
+
+	if (!insertText(element, `[${redaction.alias}]`)) {
+		console.error('AI-Shield: Could not insert redacted text');
+		return;
+	}
+
+	if (existing) return;
+
+	// cache and db must agree
+	redactionByTarget.set(target, redaction);
+
+	redactionService.addMany([redaction]).catch((err) => {
+		console.error(`AI-Shield: Failed to persist new redactions\n${err}`);
+	});
+}
+
+// ponytail: only exempts future pastes, the placeholder in the current
+// message stays; in-place restore is the upgrade path
+async function whitelistSelection(): Promise<void> {
+	try {
+		let text = readSelection(document.activeElement).trim();
+
+		// chatbox text is usually already redacted: whitelist the original
+		// value behind the placeholder, not the placeholder itself
+		if (hasUlid(text)) {
+			const aliases = findMatches(text, [regexUlid]);
+			const redactions = await redactionService.getManyByAlias(aliases);
+
+			text = unredactText(text, redactions);
+		}
+
+		// empty, or a placeholder that could not be resolved
+		if (!text || hasUlid(text)) return;
+
+		const regex = buildFilterRegex(text, 'text', false);
+
+		const isListed = whitelistState.state.some(
+			(filter) => filter.regex.source === regex.source,
+		);
+
+		if (isListed) return;
+
+		await whitelistState.addFilter({ label: text, regex, isEnabled: true });
+	} catch (err) {
+		console.error(`AI-Shield: Whitelist failed\n${err}`);
+	}
+}
+
+export { redact, redactSelection, unredact, whitelistSelection };

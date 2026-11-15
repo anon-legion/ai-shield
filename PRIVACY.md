@@ -24,6 +24,7 @@ Uninstalling the extension deletes this data.
 ## Permissions
 
 - `clipboardRead` / `clipboardWrite`: read pasted text and restore original values on copy.
+- `contextMenus`: add the Redact and Whitelist entries to the right-click menu on supported AI chat sites.
 - `storage`: save filters, settings and the mirrored prompt locally.
 - Site access (supported AI chat sites only): run the paste/copy handlers on those pages.
 

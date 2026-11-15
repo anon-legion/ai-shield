@@ -1,6 +1,12 @@
+import { MenuId } from '../models/redaction';
 import { AI_MATCH_PATTERNS, isAiSite } from '../utils/aiSites';
 import { initPromptMirror } from '../utils/promptMirror';
-import { redact, unredact } from '../utils/redaction/redactionHandler';
+import {
+	redact,
+	redactSelection,
+	unredact,
+	whitelistSelection,
+} from '../utils/redaction/redactionHandler';
 
 export default defineContentScript({
 	matches: AI_MATCH_PATTERNS,
@@ -20,5 +26,11 @@ export default defineContentScript({
 		});
 
 		document.addEventListener('paste', redact, { capture: true });
+
+		// context menu clicks, pushed from the background
+		browser.runtime.onMessage.addListener((message) => {
+			if (message?.type === MenuId.Redact) redactSelection();
+			if (message?.type === MenuId.Whitelist) void whitelistSelection();
+		});
 	},
 });

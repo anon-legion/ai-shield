@@ -12,4 +12,10 @@ const Idb = {
 	DbObjectStoreName: 'redactions' as const,
 };
 
-export { Idb, type IRedaction, type ULID };
+// context menu item ids, doubling as the background→content message type
+const MenuId = {
+	Redact: 'ai-shield:redact',
+	Whitelist: 'ai-shield:whitelist',
+} as const;
+
+export { Idb, type IRedaction, MenuId, type ULID };
