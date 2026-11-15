@@ -2,16 +2,24 @@
 import type { IFilter } from '../../models/filter';
 import { type FilterState, filterState } from '../filterState.svelte';
 import Button from './Button.svelte';
+import IconButton from './IconButton.svelte';
 import TextInput from './TextInput.svelte';
 
 interface IProps {
 	filter: IFilter;
 	index: number;
+	isCustom: boolean;
 	onclose: () => void;
 	filters?: FilterState;
 }
 
-const { filter, index, onclose, filters = filterState }: IProps = $props();
+const {
+	filter,
+	index,
+	isCustom,
+	onclose,
+	filters = filterState,
+}: IProps = $props();
 
 // deliberate snapshot: the edit buffer seeds from the filter once on mount
 // svelte-ignore state_referenced_locally
@@ -52,5 +60,17 @@ function saveEdit(): void {
 		<Button variant="outline" onclick={onclose} class="h-6.5 px-3 text-xs">
 			Cancel
 		</Button>
+		{#if isCustom}
+			<!-- removing the filter unmounts this row, so no onclose() needed -->
+			<span class="ml-auto">
+				<IconButton
+					name="trash"
+					label="Delete filter"
+					danger
+					size={26}
+					onclick={() => filters.removeFilter(index)}
+				/>
+			</span>
+		{/if}
 	</div>
 </div>

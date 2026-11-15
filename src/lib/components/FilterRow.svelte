@@ -48,15 +48,10 @@ const checkboxClass = $derived(
 			{filter}
 			{index}
 			{filters}
+			{isCustom}
 			onclose={() => (editing = false)}
 		/>
 	{:else}
-		<FilterRowView
-			{filter}
-			{index}
-			{filters}
-			{isCustom}
-			onedit={() => (editing = true)}
-		/>
+		<FilterRowView {filter} {isCustom} onedit={() => (editing = true)} />
 	{/if}
 </div>

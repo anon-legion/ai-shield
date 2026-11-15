@@ -29,7 +29,7 @@ const {
 	{onclick}
 	class={[
 		'grid shrink-0 cursor-pointer place-items-center rounded-[3px] transition-colors hover:bg-rule',
-		danger ? 'text-muted hover:text-danger' : 'text-muted hover:text-fg',
+		danger ? 'text-danger' : 'text-muted hover:text-fg',
 		active && 'bg-rule text-fg',
 	]}
 	style:width="{size}px"

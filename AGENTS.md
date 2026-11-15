@@ -12,8 +12,6 @@ Browser extension: WXT + Svelte 5 + Tailwind 4. Package manager: Bun. Lint/forma
 - `bunx biome check --write` — lint + format + organize imports.
 - `bunx wxt prepare` — regenerate `.wxt/` (types, tsconfig, manifest types). Re-run after changing entrypoints, `wxt.config.ts`, or pulling.
 
-No tests. No test command.
-
 ## Critical order
 
 1. `bun install` (postinstall generates `.wxt/`).
