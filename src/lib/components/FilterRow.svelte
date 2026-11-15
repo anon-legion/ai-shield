@@ -13,8 +13,7 @@ interface IProps {
 
 const { filter, index, filters = filterState }: IProps = $props();
 
-// ponytail: suffix sniff instead of an isDefault field — avoids a storage
-// migration; add the field when defaults become renamable
+// suffix sniff instead of an isDefault field to avoid storage migration
 const isCustom = $derived(!filter.label.endsWith('(default)'));
 
 let editing = $state(false);
@@ -29,7 +28,7 @@ const checkboxClass = $derived(
 <div class="flex items-center gap-2.5 border-t border-rule py-2">
 	<label
 		class={[
-			'grid size-4 shrink-0 cursor-pointer place-items-center rounded-[2px] has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-primary',
+			'grid size-4 shrink-0 cursor-pointer place-items-center rounded-xs has-focus-visible:outline-2 has-focus-visible:outline-primary',
 			checkboxClass,
 		]}
 	>

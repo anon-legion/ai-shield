@@ -12,7 +12,7 @@ import { storedItem } from '../storedItem.svelte';
 
 const promptMirror = storedItem(promptMirrorStore);
 
-// ponytail: derive surviving targets first so the badge agrees with redact();
+// derive surviving targets first so the badge agrees with redact();
 // counting bounded unique targets dedupes across patterns, closer to what
 // redactText actually substitutes than the old raw per-pattern sum
 const targets = $derived(

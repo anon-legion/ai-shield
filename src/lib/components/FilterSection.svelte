@@ -8,16 +8,16 @@ interface IProps {
 	title: string;
 	kind: string;
 	filters: FilterState;
-	open?: boolean;
-	bordered?: boolean;
+	isOpen?: boolean;
+	isBordered?: boolean;
 }
 
 const {
 	title,
 	kind,
 	filters,
-	open = false,
-	bordered = false,
+	isOpen = false,
+	isBordered = false,
 }: IProps = $props();
 
 const enabledCount = $derived(
@@ -28,10 +28,10 @@ const enabledCount = $derived(
 <!-- shared name makes sibling sections a native exclusive accordion -->
 <details
 	name="section"
-	{open}
+	open={isOpen}
 	class={[
 		'group/sec flex min-h-0 flex-col open:flex-1',
-		bordered && 'border-t-2 border-rule',
+		isBordered && 'border-t-2 border-rule',
 	]}
 >
 	<summary

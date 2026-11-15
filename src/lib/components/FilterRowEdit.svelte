@@ -48,8 +48,8 @@ function saveEdit(): void {
 		class="h-7"
 	/>
 	<div class="flex gap-1.5">
-		<Button onclick={saveEdit} class="h-[26px] px-3 text-xs">Save</Button>
-		<Button variant="outline" onclick={onclose} class="h-[26px] px-3 text-xs">
+		<Button onclick={saveEdit} class="h-6.5 px-3 text-xs">Save</Button>
+		<Button variant="outline" onclick={onclose} class="h-6.5 px-3 text-xs">
 			Cancel
 		</Button>
 	</div>

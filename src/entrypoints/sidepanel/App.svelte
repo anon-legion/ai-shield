@@ -10,8 +10,8 @@ const autoRedact = storedItem(autoRedactStore);
 
 let tab = $state<'redact' | 'extra'>('redact');
 
-function tabClass(active: boolean): string {
-	return active
+function tabClass(isActive: boolean): string {
+	return isActive
 		? '-mb-[2px] h-[34px] cursor-pointer border-b-2 font-semibold border-primary text-fg'
 		: '-mb-[2px] h-[34px] cursor-pointer border-b-2 font-semibold border-transparent text-muted hover:text-fg';
 }
@@ -45,12 +45,12 @@ function tabClass(active: boolean): string {
 			/>
 		</section>
 
-		<FilterSection title="Filter" kind="filter" filters={filterState} open />
+		<FilterSection title="Filter" kind="filter" filters={filterState} isOpen />
 		<FilterSection
 			title="White list"
 			kind="white list"
 			filters={whitelistState}
-			bordered
+			isBordered
 		/>
 
 		<PromptSection />

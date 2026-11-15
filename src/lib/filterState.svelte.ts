@@ -8,10 +8,9 @@ import {
 
 class FilterState {
 	#store: typeof filterStore;
+	#isSkipNextUpdate = false;
 
 	state = $state<IFilter[]>([]);
-
-	#skipNextUpdate = false;
 
 	constructor(store: typeof filterStore) {
 		this.#store = store;
@@ -21,8 +20,8 @@ class FilterState {
 	}
 
 	updateState = (serialized: ISerializedFilter[] | null): void => {
-		if (this.#skipNextUpdate) {
-			this.#skipNextUpdate = false;
+		if (this.#isSkipNextUpdate) {
+			this.#isSkipNextUpdate = false;
 
 			return;
 		}
@@ -35,7 +34,7 @@ class FilterState {
 	};
 
 	async #persist(): Promise<void> {
-		this.#skipNextUpdate = true; // suppress updateState call by the store's watch() triggered by setValue()
+		this.#isSkipNextUpdate = true; // suppress updateState call by the store's watch() triggered by setValue()
 
 		await this.#store.setValue(serializeFilterList(this.state));
 	}
@@ -60,7 +59,7 @@ class FilterState {
 
 	async removeFilter(index: number): Promise<boolean> {
 		try {
-			const state = [...this.state.filter((_, i) => i !== index)];
+			const state = this.state.filter((_, i) => i !== index);
 
 			this.state = state;
 

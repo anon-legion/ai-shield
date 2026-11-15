@@ -29,8 +29,8 @@ function countMatches(text: string, patterns: RegExp[]): number {
 	}, 0);
 }
 
-// ponytail: substring semantics — a whitelist pattern matching anywhere in the
-// target exempts it; anchor sources with ^$ if full-match is ever wanted
+// a whitelist pattern matching anywhere in the target exempts
+// it; anchor sources with ^$ if full-match is ever wanted
 function applyWhitelist(targets: string[], whitelist: RegExp[]): string[] {
 	if (whitelist.length === 0) return targets;
 
