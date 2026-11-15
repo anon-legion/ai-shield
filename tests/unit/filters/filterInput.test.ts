@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import { buildFilterRegex } from '@/utils/filter/filterInput';
+import type { IFilter } from '@/models/filter';
+import { buildFilterRegex, enabledPatterns } from '@/utils/filter/filterInput';
 
 describe('buildFilterRegex', () => {
 	test('text mode escapes regex metacharacters', () => {
@@ -39,5 +40,23 @@ describe('buildFilterRegex', () => {
 
 	test('text mode never throws on metacharacters', () => {
 		expect(buildFilterRegex('(', 'text', false).source).toBe('\\(');
+	});
+});
+
+describe('enabledPatterns', () => {
+	function filter(regex: RegExp, isEnabled: boolean): IFilter {
+		return { label: 'f', regex, isEnabled };
+	}
+
+	test('keeps only enabled filters', () => {
+		const patterns = enabledPatterns([filter(/a/g, true), filter(/b/g, false)]);
+
+		expect(patterns.map((regex) => regex.source)).toEqual(['a']);
+	});
+
+	test('forces the g flag, preserving other flags', () => {
+		const patterns = enabledPatterns([filter(/a/i, true), filter(/b/g, true)]);
+
+		expect(patterns.map((regex) => regex.flags)).toEqual(['gi', 'g']);
 	});
 });

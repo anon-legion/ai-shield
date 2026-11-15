@@ -1,5 +1,5 @@
 <script lang="ts" module>
-type IconName = 'pin' | 'x' | 'pencil' | 'trash' | 'check';
+type IconName = 'pin' | 'x' | 'pencil' | 'trash' | 'check' | 'chevron';
 
 // lucide path data, inlined to avoid an icon dependency
 const shapes: Record<IconName, string> = {
@@ -10,6 +10,7 @@ const shapes: Record<IconName, string> = {
 	trash:
 		'<polyline points="3 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>',
 	check: '<polyline points="4 12 10 18 20 6"/>',
+	chevron: '<polyline points="9 6 15 12 9 18"/>',
 };
 
 export type { IconName };

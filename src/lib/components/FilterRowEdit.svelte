@@ -1,16 +1,25 @@
 <script lang="ts">
 import type { IFilter } from '../../models/filter';
-import { filterState } from '../filterState.svelte';
+import { type FilterState, filterState } from '../filterState.svelte';
 import Button from './Button.svelte';
+import IconButton from './IconButton.svelte';
 import TextInput from './TextInput.svelte';
 
 interface IProps {
 	filter: IFilter;
 	index: number;
+	isCustom: boolean;
 	onclose: () => void;
+	filters?: FilterState;
 }
 
-const { filter, index, onclose }: IProps = $props();
+const {
+	filter,
+	index,
+	isCustom,
+	onclose,
+	filters = filterState,
+}: IProps = $props();
 
 // deliberate snapshot: the edit buffer seeds from the filter once on mount
 // svelte-ignore state_referenced_locally
@@ -28,7 +37,7 @@ function saveEdit(): void {
 		return;
 	}
 
-	filterState.updateFilter(index, {
+	filters.updateFilter(index, {
 		...filter,
 		label: editLabel.trim() || filter.label,
 		regex,
@@ -47,9 +56,21 @@ function saveEdit(): void {
 		class="h-7"
 	/>
 	<div class="flex gap-1.5">
-		<Button onclick={saveEdit} class="h-[26px] px-3 text-xs">Save</Button>
-		<Button variant="outline" onclick={onclose} class="h-[26px] px-3 text-xs">
+		<Button onclick={saveEdit} class="h-6.5 px-3 text-xs">Save</Button>
+		<Button variant="outline" onclick={onclose} class="h-6.5 px-3 text-xs">
 			Cancel
 		</Button>
+		{#if isCustom}
+			<!-- removing the filter unmounts this row, so no onclose() needed -->
+			<span class="ml-auto">
+				<IconButton
+					name="trash"
+					label="Delete filter"
+					danger
+					size={26}
+					onclick={() => filters.removeFilter(index)}
+				/>
+			</span>
+		{/if}
 	</div>
 </div>

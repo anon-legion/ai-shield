@@ -1,16 +1,14 @@
 <script lang="ts">
 import type { IFilter } from '../../models/filter';
-import { filterState } from '../filterState.svelte';
 import IconButton from './IconButton.svelte';
 
 interface IProps {
 	filter: IFilter;
-	index: number;
 	isCustom: boolean;
 	onedit: () => void;
 }
 
-const { filter, index, isCustom, onedit }: IProps = $props();
+const { filter, isCustom, onedit }: IProps = $props();
 </script>
 
 <span class="min-w-0 flex-1 truncate">{filter.label}</span>
@@ -22,11 +20,3 @@ const { filter, index, isCustom, onedit }: IProps = $props();
 	</span>
 {/if}
 <IconButton name="pencil" label="Edit filter" onclick={onedit} />
-{#if isCustom}
-	<IconButton
-		name="trash"
-		label="Delete filter"
-		danger
-		onclick={() => filterState.removeFilter(index)}
-	/>
-{/if}

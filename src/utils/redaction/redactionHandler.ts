@@ -1,11 +1,13 @@
 import { createProxyService } from '@webext-core/proxy-service';
-import { filterState } from '../../lib/filterState.svelte';
+import { filterState, whitelistState } from '../../lib/filterState.svelte';
 import { autoRedactStore } from '../../lib/settingsStore';
 import type { IRedaction } from '../../models/redaction';
+import { enabledPatterns } from '../filter/filterInput';
 import { hasUlid, regexUlid } from '../filter/filterUlid';
 import { generateRedaction } from './redactionGenerator';
 import { REDACTION_SERVICE_KEY } from './redactionService';
 import {
+	applyWhitelist,
 	findMatches,
 	getRedactionsToPersist,
 	redactText,
@@ -124,15 +126,10 @@ function redact(e: ClipboardEvent): void {
 
 	if (!originalText) return;
 
-	const activeFilters = filterState.state.filter((filter) => filter.isEnabled);
-
-	const patterns = activeFilters.map((filter) =>
-		filter.regex.global
-			? filter.regex
-			: new RegExp(filter.regex.source, `${filter.regex.flags}g`),
+	const matchedTargets = applyWhitelist(
+		findMatches(originalText, enabledPatterns(filterState.state)),
+		enabledPatterns(whitelistState.state),
 	);
-
-	const matchedTargets = findMatches(originalText, patterns);
 
 	if (matchedTargets.length < 1) return;
 

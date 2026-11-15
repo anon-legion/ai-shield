@@ -3,6 +3,7 @@ import type { IRedaction } from '@/models/redaction';
 import { filterDefault } from '@/utils/filter/filterDefault';
 import { generateRedaction } from '@/utils/redaction/redactionGenerator';
 import {
+	applyWhitelist,
 	boundTarget,
 	countMatches,
 	escapeRegExp,
@@ -18,6 +19,32 @@ function redaction(target: string, alias: string): IRedaction {
 function matches(target: string, text: string): boolean {
 	return new RegExp(boundTarget(target), 'u').test(text);
 }
+
+describe('applyWhitelist', () => {
+	test('removes a target the whitelist pattern matches as a substring', () => {
+		expect(
+			applyWhitelist(['user@example.com', 'user@other.com'], [/example\.com/g]),
+		).toEqual(['user@other.com']);
+	});
+
+	test('returns all targets when the whitelist is empty', () => {
+		expect(applyWhitelist(['a', 'b'], [])).toEqual(['a', 'b']);
+	});
+
+	test('keeps targets no whitelist pattern matches', () => {
+		expect(applyWhitelist(['user@other.com'], [/example\.com/g])).toEqual([
+			'user@other.com',
+		]);
+	});
+
+	// g-flagged test() resumes from lastIndex; without the reset the second
+	// identical target would survive the whitelist
+	test('g-flagged pattern matches consecutive identical targets', () => {
+		expect(
+			applyWhitelist(['user@example.com', 'user@example.com'], [/example/g]),
+		).toEqual([]);
+	});
+});
 
 describe('escapeRegExp', () => {
 	test('escapes metacharacters so they match literally', () => {

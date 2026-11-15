@@ -29,6 +29,21 @@ function countMatches(text: string, patterns: RegExp[]): number {
 	}, 0);
 }
 
+// a whitelist pattern matching anywhere in the target exempts
+// it; anchor sources with ^$ if full-match is ever wanted
+function applyWhitelist(targets: string[], whitelist: RegExp[]): string[] {
+	if (whitelist.length === 0) return targets;
+
+	return targets.filter(
+		(target) =>
+			!whitelist.some((regex) => {
+				regex.lastIndex = 0; // g-flagged regex test() is stateful
+
+				return regex.test(target);
+			}),
+	);
+}
+
 function redactText(text: string, redactions: IRedaction[]): string {
 	if (redactions.length === 0) return text;
 
@@ -92,6 +107,7 @@ function getRedactionsToPersist(
 }
 
 export {
+	applyWhitelist,
 	boundTarget,
 	countMatches,
 	escapeRegExp,

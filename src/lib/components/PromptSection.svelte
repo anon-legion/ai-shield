@@ -1,23 +1,34 @@
 <script lang="ts">
-import { countMatches } from '../../utils/redaction/redactionText';
-import { filterState } from '../filterState.svelte';
+import { enabledPatterns } from '../../utils/filter/filterInput';
+import {
+	applyWhitelist,
+	boundTarget,
+	countMatches,
+	findMatches,
+} from '../../utils/redaction/redactionText';
+import { filterState, whitelistState } from '../filterState.svelte';
 import { promptMirrorStore } from '../settingsStore';
 import { storedItem } from '../storedItem.svelte';
 
 const promptMirror = storedItem(promptMirrorStore);
 
-const enabledPatterns = $derived(
-	filterState.state
-		.filter((filter) => filter.isEnabled)
-		.map((filter) =>
-			filter.regex.global
-				? filter.regex
-				: new RegExp(filter.regex.source, `${filter.regex.flags}g`),
-		),
+// derive surviving targets first so the badge agrees with redact();
+// counting bounded unique targets dedupes across patterns, closer to what
+// redactText actually substitutes than the old raw per-pattern sum
+const targets = $derived(
+	applyWhitelist(
+		findMatches(promptMirror.value, enabledPatterns(filterState.state)),
+		enabledPatterns(whitelistState.state),
+	),
 );
 
 const redactionCount = $derived(
-	countMatches(promptMirror.value, enabledPatterns),
+	countMatches(
+		promptMirror.value,
+		[...new Set(targets)].map(
+			(target) => new RegExp(boundTarget(target), 'gu'),
+		),
+	),
 );
 
 const redactionNoun = $derived(
