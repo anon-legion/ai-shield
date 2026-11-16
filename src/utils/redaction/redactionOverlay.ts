@@ -17,7 +17,7 @@ interface IPlaceholder {
 	start: number;
 }
 
-// ponytail: fixed list, enough for text to wrap like the textarea does; css
+// fixed list, enough for text to wrap like the textarea does; css
 // zoom/transform or custom ::-webkit-scrollbar widths can still misalign
 const MIRROR_PROPERTIES = [
 	'border-top-width',
@@ -61,10 +61,11 @@ const mirror = document.createElement('div');
 host.style.cssText = 'position:fixed;top:0;left:0;z-index:2147483647';
 mirror.style.cssText =
 	'position:fixed;visibility:hidden;pointer-events:none;box-sizing:border-box;margin:0;border-style:solid;border-color:transparent;overflow-x:hidden';
-// shadow root keeps the host page's css off the boxes
-host.attachShadow({ mode: 'open' }).append(mirror, layer);
+// shadow root keeps the host page's css off the boxes; closed so page script
+// cannot reach the restore buttons
+host.attachShadow({ mode: 'closed' }).append(mirror, layer);
 
-// ponytail: tracks whatever editable was focused last, like promptMirror
+// tracks whatever editable was focused last, like promptMirror
 let chatbox: HTMLElement | null = null;
 let isRunning = false;
 let lastText: string | null = null;
@@ -151,10 +152,13 @@ function createBox(rect: DOMRect, alias: string, nth: number): HTMLElement {
 	button.title = 'Restore original text';
 	button.style.cssText = `all:initial;position:absolute;top:-8px;right:-8px;width:14px;height:14px;border-radius:50%;background:${BLUE};color:#fbf1c7;font:700 11px/14px sans-serif;text-align:center;cursor:pointer;pointer-events:auto`;
 
-	// mousedown, not click: keeps focus and caret in the chatbox, and a
-	// re-render between down and up cannot swallow it
-	// ponytail: mouse only, the sidepanel x is the keyboard path
+	// mousedown, not click: keeps focus and caret in the chatbox,
+	// and a re-render between down and up cannot swallow it
+	// mouse only, the sidepanel x is the keyboard path
 	button.addEventListener('mousedown', (e) => {
+		// a real click only: a scripted one would hand the original to the page
+		if (!e.isTrusted) return;
+
 		e.preventDefault();
 		void restoreRedaction(alias, nth);
 	});
@@ -168,7 +172,7 @@ function render(element: HTMLElement): void {
 	// spa re-renders can drop foreign nodes
 	if (!host.isConnected) document.documentElement.append(host);
 
-	// ponytail: single-line inputs get no box, the mirror wraps where they
+	// single-line inputs get no box, the mirror wraps where they
 	// scroll; chatboxes are textareas or editables
 	const placeholders =
 		element instanceof HTMLInputElement ? [] : findPlaceholders(element);
@@ -181,7 +185,7 @@ function render(element: HTMLElement): void {
 
 		seenByAlias.set(alias, nth + 1);
 
-		// ponytail: one box over the bounding rect; a placeholder wrapping
+		// one box over the bounding rect; a placeholder wrapping
 		// across lines gets a two-line box. getClientRects() if that shows
 		const rect = range.getBoundingClientRect();
 
@@ -269,7 +273,7 @@ async function restoreRedaction(alias: string, nth: number): Promise<void> {
 		if (!redaction) return;
 
 		// located after the await: the text may have changed meanwhile
-		// ponytail: counts bracketed placeholders only; if the user stripped the
+		// counts bracketed placeholders only; if the user stripped the
 		// brackets off one, the sidepanel's nth can land on a sibling occurrence
 		const placeholder = findPlaceholders(element).filter(
 			(found) => found.alias === alias,
@@ -287,6 +291,9 @@ async function restoreRedaction(alias: string, nth: number): Promise<void> {
 
 			selection?.removeAllRanges();
 			selection?.addRange(placeholder.range);
+			// editors with their own selection model (lexical) sync it on this
+			// event, which the browser only fires after the insert below
+			document.dispatchEvent(new Event('selectionchange'));
 		}
 
 		if (!insertText(element, redaction.target)) {

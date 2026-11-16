@@ -3,8 +3,12 @@ import type { IFilter } from '../../models/filter';
 const filterDefault: IFilter[] = [
 	{
 		label: 'Emails (default)',
+		// the leading group only limits where an unquoted local part may start
+		// (a token start, or right after a previous match's tld): without it a
+		// long run with no @ (base64, minified code) is retried from every
+		// character, quadratic.
 		regex:
-			/(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))/g,
+			/(((?:(?<![^<>()[\]\\.,;:\s@"])|(?![a-zA-Z])(?<=\.[a-zA-Z]{2,}))[^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))/g,
 		isEnabled: true,
 	},
 	{

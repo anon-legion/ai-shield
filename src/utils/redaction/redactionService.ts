@@ -58,11 +58,13 @@ function createRedactionService(_db: Promise<ExtensionDb>): IRedactionService {
 			try {
 				const db = await _db;
 
-				const results = (
-					await db.getAllFromIndex('redactions', 'by-alias')
-				).filter((redaction) => aliases.includes(redaction.alias));
+				const results = await Promise.all(
+					[...new Set(aliases)].map((alias) =>
+						db.getFromIndex('redactions', 'by-alias', alias),
+					),
+				);
 
-				return results;
+				return results.filter((redaction) => redaction !== undefined);
 			} catch (err) {
 				console.error(err);
 
@@ -73,11 +75,13 @@ function createRedactionService(_db: Promise<ExtensionDb>): IRedactionService {
 			try {
 				const db = await _db;
 
-				const results = (
-					await db.getAllFromIndex('redactions', 'by-target')
-				).filter((redaction) => targets.includes(redaction.target));
+				const results = await Promise.all(
+					[...new Set(targets)].map((target) =>
+						db.getFromIndex('redactions', 'by-target', target),
+					),
+				);
 
-				return results;
+				return results.filter((redaction) => redaction !== undefined);
 			} catch (err) {
 				console.error(err);
 

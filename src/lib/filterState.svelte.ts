@@ -8,7 +8,6 @@ import {
 
 class FilterState {
 	#store: typeof filterStore;
-	#isSkipNextUpdate = false;
 
 	state = $state<IFilter[]>([]);
 
@@ -20,22 +19,21 @@ class FilterState {
 	}
 
 	updateState = (serialized: ISerializedFilter[] | null): void => {
-		if (this.#isSkipNextUpdate) {
-			this.#isSkipNextUpdate = false;
+		const incoming = serialized ?? this.#store.fallback;
 
+		// ignore the watch() echo of our own setValue(): state already matches,
+		// and replacing it would remount every row keyed on these objects
+		if (
+			JSON.stringify(incoming) ===
+			JSON.stringify(serializeFilterList(this.state))
+		) {
 			return;
 		}
 
-		const filterList = deserializeFilterList(
-			serialized ?? this.#store.fallback,
-		);
-
-		this.state = filterList;
+		this.state = deserializeFilterList(incoming);
 	};
 
 	async #persist(): Promise<void> {
-		this.#isSkipNextUpdate = true; // suppress updateState call by the store's watch() triggered by setValue()
-
 		await this.#store.setValue(serializeFilterList(this.state));
 	}
 

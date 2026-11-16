@@ -38,6 +38,19 @@ describe('Emails', () => {
 	test('excludes surrounding angle brackets and punctuation', () => {
 		expect(hits('Emails', 'see <a@b.com>, ok')).toEqual(['a@b.com']);
 	});
+
+	test('matches an address glued to the previous one', () => {
+		expect(hits('Emails', 'a@x.com_b@y.com')).toEqual(['a@x.com', '_b@y.com']);
+	});
+
+	// unguarded, the pattern retries from every character: seconds at this size
+	test('stays fast on a long run with no address', () => {
+		const blob = 'QWxhZGRpbjpvcGVuIHNlc2FtZQ'.repeat(8000);
+		const start = performance.now();
+
+		expect(hits('Emails', blob)).toEqual([]);
+		expect(performance.now() - start).toBeLessThan(500);
+	});
 });
 
 describe('Phone Numbers', () => {

@@ -14,7 +14,9 @@ function boundTarget(target: string): string {
 function findMatches(text: string, patterns: RegExp[]): string[] {
 	return patterns.flatMap((regex) => {
 		regex.lastIndex = 0;
-		return [...new Set(text.match(regex) ?? [])];
+		// a pattern that can match nothing (x*, an emptied filter) yields '',
+		// which as a target would put a placeholder between every character
+		return [...new Set(text.match(regex) ?? [])].filter(Boolean);
 	});
 }
 

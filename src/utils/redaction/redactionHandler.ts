@@ -76,6 +76,34 @@ function insertIntoFormField(
 	return true;
 }
 
+// lexical (perplexity) deletes dom nodes it did not create, so a direct insert
+// vanishes: hand it a paste event carrying the text and let it insert itself
+// lexical only; paste-first for every rich editor is the upgrade
+// path if another one rejects direct dom edits
+function pasteIntoEditor(element: HTMLElement, text: string): boolean {
+	const clipboardData = new DataTransfer();
+
+	clipboardData.setData('text/plain', text);
+
+	const paste = new ClipboardEvent('paste', {
+		clipboardData,
+		bubbles: true,
+		cancelable: true,
+	});
+
+	// a browser that drops the init data would have the editor paste nothing
+	if (paste.clipboardData?.getData('text/plain') !== text) return false;
+
+	// dispatchEvent is false once a listener cancels: the editor took the paste
+	if (element.dispatchEvent(paste)) return false;
+
+	// lexical renders in a microtask and fires no input event: announce it
+	// afterwards, on document, where its own input handler does not listen
+	setTimeout(() => document.dispatchEvent(new Event('input')));
+
+	return true;
+}
+
 function insertIntoEditable(element: HTMLElement, text: string): boolean {
 	const selection = window.getSelection();
 
@@ -85,6 +113,13 @@ function insertIntoEditable(element: HTMLElement, text: string): boolean {
 
 	// caret drifted out of the editor (e.g. onto a placeholder overlay)
 	if (!element.contains(range.commonAncestorContainer)) return false;
+
+	if (
+		element.closest('[data-lexical-editor]') &&
+		pasteIntoEditor(element, text)
+	) {
+		return true;
+	}
 
 	range.deleteContents();
 
@@ -120,6 +155,9 @@ function insertText(element: HTMLElement, text: string): boolean {
 
 // must stay synchronous: preventDefault and the insert have to happen in the same tick as the paste event
 function redact(e: ClipboardEvent): void {
+	// scripted pastes carry no real clipboard; ours is already redacted
+	if (!e.isTrusted) return;
+
 	if (!autoRedact) return;
 
 	const originalText = e.clipboardData?.getData('text/plain') ?? '';
@@ -136,6 +174,9 @@ function redact(e: ClipboardEvent): void {
 	const element = document.activeElement;
 
 	if (!(element instanceof HTMLElement)) return;
+
+	// login and other non-prompt inputs keep their native paste
+	if (element instanceof HTMLInputElement && !isTextField(element)) return;
 
 	e.preventDefault();
 	e.stopImmediatePropagation();
@@ -197,12 +238,15 @@ function unredact(): void {
 	}, 0);
 }
 
+// prompt-like fields only: password, email and the like are not prompts,
+// and most other input types throw on setSelectionRange
 function isTextField(
 	element: Element | null,
 ): element is HTMLTextAreaElement | HTMLInputElement {
 	return (
 		element instanceof HTMLTextAreaElement ||
-		element instanceof HTMLInputElement
+		(element instanceof HTMLInputElement &&
+			(element.type === 'text' || element.type === 'search'))
 	);
 }
 
@@ -251,7 +295,7 @@ function redactSelection(): void {
 	});
 }
 
-// ponytail: only exempts future pastes, the placeholder in the current
+// only exempts future pastes, the placeholder in the current
 // message stays; in-place restore is the upgrade path
 async function whitelistSelection(): Promise<void> {
 	try {

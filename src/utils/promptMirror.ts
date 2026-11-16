@@ -1,6 +1,7 @@
 import { createProxyService } from '@webext-core/proxy-service';
 import { promptMirrorStore } from '../lib/settingsStore';
 import { hasUlid, regexUlid } from './filter/filterUlid';
+import { isTextField } from './redaction/redactionHandler';
 import { REDACTION_SERVICE_KEY } from './redaction/redactionService';
 import { findMatches, splitRedactions } from './redaction/redactionText';
 
@@ -10,15 +11,6 @@ const DEBOUNCE_MS = 300;
 
 let timer: ReturnType<typeof setTimeout> | undefined;
 let lastPushed: string | undefined;
-
-function isTextField(
-	element: Element | null,
-): element is HTMLTextAreaElement | HTMLInputElement {
-	return (
-		element instanceof HTMLTextAreaElement ||
-		element instanceof HTMLInputElement
-	);
-}
 
 function readEditableText(): string | null {
 	const element = document.activeElement;
@@ -51,7 +43,7 @@ async function push(text: string): Promise<void> {
 	}
 }
 
-// ponytail: mirrors whatever editable is focused, not "the chatbox";
+// mirrors whatever editable is focused, not "the chatbox";
 // per-site chatbox detection is the upgrade path if this gets noisy
 function initPromptMirror(): void {
 	const onActivity = (): void => {

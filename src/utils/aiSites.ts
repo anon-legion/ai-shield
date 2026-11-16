@@ -10,8 +10,7 @@ const AI_MATCH_PATTERNS = [
 	'*://x.com/i/grok*',
 	'*://copilot.microsoft.com/*',
 	'*://chat.deepseek.com/*',
-	'*://perplexity.ai/*',
-	'*://mistral.ai/*',
+	'*://*.perplexity.ai/*',
 	'*://*.mistral.ai/*',
 ];
 

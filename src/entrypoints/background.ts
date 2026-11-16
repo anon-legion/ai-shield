@@ -1,4 +1,5 @@
 import { registerService } from '@webext-core/proxy-service';
+import { promptMirrorStore } from '../lib/settingsStore';
 import { MenuId } from '../models/redaction';
 import { AI_MATCH_PATTERNS } from '../utils/aiSites';
 import { openExtensionDb } from '../utils/data/database';
@@ -61,6 +62,11 @@ export default defineBackground(() => {
 	void browser.storage.local.setAccessLevel?.({
 		accessLevel: 'TRUSTED_AND_UNTRUSTED_CONTEXTS',
 	});
+
+	// the mirror holds the unredacted prompt: don't keep it across browser runs
+	browser.runtime.onStartup.addListener(
+		() => void promptMirrorStore.removeValue(),
+	);
 
 	enableToolbarSidePanel();
 	registerContextMenus();

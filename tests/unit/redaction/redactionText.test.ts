@@ -124,6 +124,12 @@ describe('findMatches', () => {
 		expect(findMatches('nothing here', [/\d{4}/g])).toEqual([]);
 	});
 
+	// '' as a target would put a placeholder between every character
+	test('drops empty matches', () => {
+		expect(findMatches('abc', [/x*/g, /(?:)/g])).toEqual([]);
+		expect(findMatches('abc', [/b*/g])).toEqual(['b']);
+	});
+
 	test('collects across multiple patterns', () => {
 		expect(findMatches('abc 123', [/[a-z]+/g, /\d+/g])).toEqual(['abc', '123']);
 	});

@@ -24,7 +24,7 @@ person/account as before" without knowing who or what it is.
 | Copilot | `copilot.microsoft.com` |
 | DeepSeek | `chat.deepseek.com` |
 | Perplexity | `perplexity.ai` |
-| Mistral | `mistral.ai` and subdomains |
+| Mistral | `mistral.ai` |
 
 The extension does nothing on any other site.
 
