@@ -82,7 +82,7 @@ Run, in order, and report real results — including failures:
 bunx biome check --write .
 bun run check
 bun run build
-bunx fallow audit --base dev
+bunx fallow@2 audit --base dev
 ```
 
 ### Licensing

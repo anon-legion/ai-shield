@@ -145,7 +145,7 @@ Run these in order, from the repository root:
 bunx biome check --write .              # lint + format + organize imports
 bun run check                           # typecheck (svelte-check, NOT tsc)
 bun run build                           # production build
-bunx fallow audit --base dev            # dead code, complexity, duplication
+bunx fallow@2 audit --base dev          # dead code, complexity, duplication
 ```
 
 CI runs the same checks on every PR and will block a merge if any of them fail. If you changed

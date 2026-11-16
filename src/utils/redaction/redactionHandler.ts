@@ -153,6 +153,30 @@ function insertText(element: HTMLElement, text: string): boolean {
 	return inserted || document.execCommand('insertText', false, text);
 }
 
+// the known redaction for a target, or a new one that is not persisted yet
+function redactionFor(target: string): IRedaction {
+	return (
+		redactionByTarget.get(target) ?? generateRedaction({ target, alias: '' })
+	);
+}
+
+// cache and db must agree; redactions already in the cache are skipped
+function persistRedactions(redactions: IRedaction[]): void {
+	const created = redactions.filter(
+		(redaction) => redactionByTarget.get(redaction.target) !== redaction,
+	);
+
+	if (created.length < 1) return;
+
+	created.forEach((redaction) => {
+		redactionByTarget.set(redaction.target, redaction);
+	});
+
+	redactionService.addMany(created).catch((err) => {
+		console.error(`AI-Shield: Failed to persist new redactions\n${err}`);
+	});
+}
+
 // must stay synchronous: preventDefault and the insert have to happen in the same tick as the paste event
 function redact(e: ClipboardEvent): void {
 	// scripted pastes carry no real clipboard; ours is already redacted
@@ -182,37 +206,15 @@ function redact(e: ClipboardEvent): void {
 	e.stopImmediatePropagation();
 
 	try {
-		const newRedactions: IRedaction[] = [];
-		const allRedactions = matchedTargets.map((target) => {
-			const existing = redactionByTarget.get(target);
-
-			if (existing) return existing;
-
-			const created = generateRedaction({ target, alias: '' });
-			newRedactions.push(created);
-
-			return created;
-		});
-
-		const redactedText = redactText(originalText, allRedactions);
+		const redactions = matchedTargets.map(redactionFor);
+		const redactedText = redactText(originalText, redactions);
 
 		if (!insertText(element, redactedText)) {
 			console.error('AI-Shield: Could not insert redacted text');
 			return;
 		}
 
-		// cache and db must agree
-		const persisted = getRedactionsToPersist(redactedText, newRedactions);
-
-		if (persisted.length < 1) return;
-
-		persisted.forEach((redaction) => {
-			redactionByTarget.set(redaction.target, redaction);
-		});
-
-		redactionService.addMany(persisted).catch((err) => {
-			console.error(`AI-Shield: Failed to persist new redactions\n${err}`);
-		});
+		persistRedactions(getRedactionsToPersist(redactedText, redactions));
 	} catch (err) {
 		console.error(`AI-Shield: Redaction failed\n${err}`);
 	}
@@ -253,65 +255,78 @@ function isTextField(
 // read from the dom, not the menu's selectionText: chrome normalizes its
 // whitespace, and firefox getSelection() is empty inside form fields
 function readSelection(element: Element | null): string {
-	if (isTextField(element)) {
-		return element.value.slice(
-			element.selectionStart ?? 0,
-			element.selectionEnd ?? 0,
-		);
-	}
+	if (!isTextField(element)) return window.getSelection()?.toString() ?? '';
 
-	return window.getSelection()?.toString() ?? '';
+	// offsets are only null on input types isTextField rejects; Number() is
+	// for the type, and maps null to 0
+	return element.value.slice(
+		Number(element.selectionStart),
+		Number(element.selectionEnd),
+	);
+}
+
+// the focused prompt field: a text field or a contenteditable
+function activeEditable(): HTMLElement | null {
+	const element = document.activeElement;
+
+	if (!(element instanceof HTMLElement)) return null;
+
+	return isTextField(element) || element.isContentEditable ? element : null;
+}
+
+// the selected text, or '' when there is nothing to redact or it is already
+// (partly) a placeholder
+function redactableSelection(element: HTMLElement): string {
+	const target = readSelection(element);
+
+	return target.trim() && !hasUlid(target) ? target : '';
 }
 
 // manual redaction of the selected chatbox text, no filter rule involved
 function redactSelection(): void {
-	const element = document.activeElement;
+	const element = activeEditable();
 
 	// only inside an editable: with focus elsewhere (e.g. body) the insert
 	// would delete selected page content
-	if (!(element instanceof HTMLElement)) return;
-	if (!isTextField(element) && !element.isContentEditable) return;
+	if (!element) return;
 
-	const target = readSelection(element);
+	const target = redactableSelection(element);
 
-	// nothing to redact, or already (partly) a placeholder
-	if (!target.trim() || hasUlid(target)) return;
+	if (!target) return;
 
-	const existing = redactionByTarget.get(target);
-	const redaction = existing ?? generateRedaction({ target, alias: '' });
+	const redaction = redactionFor(target);
 
 	if (!insertText(element, `[${redaction.alias}]`)) {
 		console.error('AI-Shield: Could not insert redacted text');
 		return;
 	}
 
-	if (existing) return;
+	persistRedactions([redaction]);
+}
 
-	// cache and db must agree
-	redactionByTarget.set(target, redaction);
+// the text with its placeholders swapped for their originals, or '' when one
+// could not be resolved
+async function resolvePlaceholders(text: string): Promise<string> {
+	if (!hasUlid(text)) return text;
 
-	redactionService.addMany([redaction]).catch((err) => {
-		console.error(`AI-Shield: Failed to persist new redactions\n${err}`);
-	});
+	const aliases = findMatches(text, [regexUlid]);
+	const redactions = await redactionService.getManyByAlias(aliases);
+	const resolved = unredactText(text, redactions);
+
+	return hasUlid(resolved) ? '' : resolved;
 }
 
 // only exempts future pastes, the placeholder in the current
 // message stays; in-place restore is the upgrade path
 async function whitelistSelection(): Promise<void> {
 	try {
-		let text = readSelection(document.activeElement).trim();
-
 		// chatbox text is usually already redacted: whitelist the original
 		// value behind the placeholder, not the placeholder itself
-		if (hasUlid(text)) {
-			const aliases = findMatches(text, [regexUlid]);
-			const redactions = await redactionService.getManyByAlias(aliases);
+		const text = await resolvePlaceholders(
+			readSelection(document.activeElement).trim(),
+		);
 
-			text = unredactText(text, redactions);
-		}
-
-		// empty, or a placeholder that could not be resolved
-		if (!text || hasUlid(text)) return;
+		if (!text) return;
 
 		const regex = buildFilterRegex(text, 'text', false);
 
@@ -328,6 +343,7 @@ async function whitelistSelection(): Promise<void> {
 }
 
 export {
+	activeEditable,
 	insertText,
 	isTextField,
 	redact,

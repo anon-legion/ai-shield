@@ -1,6 +1,6 @@
 import { createProxyService } from '@webext-core/proxy-service';
 import { hasUlid, matchPlaceholders } from '../filter/filterUlid';
-import { insertText, isTextField } from './redactionHandler';
+import { activeEditable, insertText, isTextField } from './redactionHandler';
 import { REDACTION_SERVICE_KEY } from './redactionService';
 
 const redactionService = createProxyService(REDACTION_SERVICE_KEY);
@@ -168,6 +168,17 @@ function createBox(rect: DOMRect, alias: string, nth: number): HTMLElement {
 	return box;
 }
 
+// false once scrolled out of view
+function isInView(
+	rect: DOMRect,
+	span: { top: number; bottom: number },
+): boolean {
+	// midpoint, not edges: glyph boxes can poke a pixel past a tight chatbox
+	const middle = (rect.top + rect.bottom) / 2;
+
+	return rect.width !== 0 && middle >= span.top && middle <= span.bottom;
+}
+
 function render(element: HTMLElement): void {
 	// spa re-renders can drop foreign nodes
 	if (!host.isConnected) document.documentElement.append(host);
@@ -189,13 +200,7 @@ function render(element: HTMLElement): void {
 		// across lines gets a two-line box. getClientRects() if that shows
 		const rect = range.getBoundingClientRect();
 
-		// midpoint, not edges: glyph boxes can poke a pixel past a tight chatbox
-		const middle = (rect.top + rect.bottom) / 2;
-
-		// scrolled out of view
-		if (rect.width === 0 || middle < span.top || middle > span.bottom) {
-			return [];
-		}
+		if (!isInView(rect, span)) return [];
 
 		return [createBox(rect, alias, nth)];
 	});
@@ -206,28 +211,32 @@ function render(element: HTMLElement): void {
 // polls per frame instead of listening: host pages clear and move the chatbox
 // without events (send, layout animations). only runs while a placeholder
 // is in the chatbox, and only re-renders when text or geometry changed
-function tick(): void {
-	const element = chatbox?.isConnected ? chatbox : null;
-	const text = !element
-		? ''
-		: isTextField(element)
-			? element.value
-			: (element.textContent ?? '');
+function connectedChatbox(): HTMLElement | null {
+	return chatbox?.isConnected ? chatbox : null;
+}
 
+function chatboxText(element: HTMLElement): string {
+	return isTextField(element) ? element.value : (element.textContent ?? '');
+}
+
+// records the chatbox text; true while it holds a placeholder
+function noteText(text: string): boolean {
 	if (text !== lastText) {
 		lastText = text;
 		lastGeometry = '';
 		hasPlaceholder = hasUlid(text);
 	}
 
-	if (!element || !hasPlaceholder) {
-		layer.replaceChildren();
-		isRunning = false;
-		lastText = null;
+	return hasPlaceholder;
+}
 
-		return;
-	}
+function stop(): void {
+	layer.replaceChildren();
+	isRunning = false;
+	lastText = null;
+}
 
+function renderIfMoved(element: HTMLElement): void {
 	const rect = element.getBoundingClientRect();
 	const geometry = [
 		rect.x,
@@ -238,19 +247,29 @@ function tick(): void {
 		element.scrollLeft,
 	].join();
 
-	if (geometry !== lastGeometry) {
-		lastGeometry = geometry;
-		render(element);
+	if (geometry === lastGeometry) return;
+
+	lastGeometry = geometry;
+	render(element);
+}
+
+function tick(): void {
+	const element = connectedChatbox();
+
+	if (!element || !noteText(chatboxText(element))) {
+		stop();
+
+		return;
 	}
 
+	renderIfMoved(element);
 	requestAnimationFrame(tick);
 }
 
 function track(): void {
-	const element = document.activeElement;
+	const element = activeEditable();
 
-	if (!(element instanceof HTMLElement)) return;
-	if (!isTextField(element) && !element.isContentEditable) return;
+	if (!element) return;
 
 	chatbox = element;
 
@@ -260,45 +279,54 @@ function track(): void {
 	requestAnimationFrame(tick);
 }
 
+function selectPlaceholder(
+	element: HTMLElement,
+	{ alias, range, start }: IPlaceholder,
+): void {
+	if (isTextField(element)) {
+		element.setSelectionRange(start, start + alias.length + 2);
+
+		return;
+	}
+
+	const selection = window.getSelection();
+
+	selection?.removeAllRanges();
+	selection?.addRange(range);
+	// editors with their own selection model (lexical) sync it on this
+	// event, which the browser only fires after the insert that follows
+	document.dispatchEvent(new Event('selectionchange'));
+}
+
+// swaps the nth placeholder of this alias in the chatbox for the given text
+function replacePlaceholder(alias: string, nth: number, text: string): void {
+	const element = connectedChatbox();
+
+	if (!element) return;
+
+	// counts bracketed placeholders only; if the user stripped the
+	// brackets off one, the sidepanel's nth can land on a sibling occurrence
+	const placeholder = findPlaceholders(element).filter(
+		(found) => found.alias === alias,
+	)[nth];
+
+	if (!placeholder) return;
+
+	selectPlaceholder(element, placeholder);
+
+	if (!insertText(element, text)) {
+		console.error('AI-Shield: Could not restore redacted text');
+	}
+}
+
 // swaps the nth placeholder of this alias in the chatbox back to its original
 // text; the redaction record stays, other messages may still carry the alias
 async function restoreRedaction(alias: string, nth: number): Promise<void> {
 	try {
-		const element = chatbox;
-
-		if (!element?.isConnected) return;
-
 		const redaction = await redactionService.getByAlias(alias);
 
-		if (!redaction) return;
-
-		// located after the await: the text may have changed meanwhile
-		// counts bracketed placeholders only; if the user stripped the
-		// brackets off one, the sidepanel's nth can land on a sibling occurrence
-		const placeholder = findPlaceholders(element).filter(
-			(found) => found.alias === alias,
-		)[nth];
-
-		if (!placeholder) return;
-
-		if (isTextField(element)) {
-			element.setSelectionRange(
-				placeholder.start,
-				placeholder.start + alias.length + 2,
-			);
-		} else {
-			const selection = window.getSelection();
-
-			selection?.removeAllRanges();
-			selection?.addRange(placeholder.range);
-			// editors with their own selection model (lexical) sync it on this
-			// event, which the browser only fires after the insert below
-			document.dispatchEvent(new Event('selectionchange'));
-		}
-
-		if (!insertText(element, redaction.target)) {
-			console.error('AI-Shield: Could not restore redacted text');
-		}
+		// placeholder located after the await: the text may have changed meanwhile
+		if (redaction) replacePlaceholder(alias, nth, redaction.target);
 	} catch (err) {
 		console.error(`AI-Shield: Restore failed\n${err}`);
 	}

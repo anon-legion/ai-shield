@@ -32,15 +32,20 @@ export default defineContentScript({
 
 		document.addEventListener('paste', redact, { capture: true });
 
-		// context menu clicks, pushed from the background
-		browser.runtime.onMessage.addListener((message) => {
-			if (message?.type === MenuId.Redact) redactSelection();
-			if (message?.type === MenuId.Whitelist) void whitelistSelection();
-
+		const handlers: Record<
+			string,
+			(message: { alias: string; nth?: number }) => void
+		> = {
+			// context menu clicks, pushed from the background
+			[MenuId.Redact]: redactSelection,
+			[MenuId.Whitelist]: () => void whitelistSelection(),
 			// x on a highlighted span in the sidepanel prompt mirror
-			if (message?.type === RESTORE_MESSAGE) {
-				void restoreRedaction(message.alias, message.nth ?? 0);
-			}
+			[RESTORE_MESSAGE]: ({ alias, nth = 0 }) =>
+				void restoreRedaction(alias, nth),
+		};
+
+		browser.runtime.onMessage.addListener((message) => {
+			handlers[message?.type]?.(message);
 		});
 	},
 });
