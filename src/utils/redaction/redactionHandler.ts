@@ -4,6 +4,7 @@ import { autoRedactStore } from '../../lib/settingsStore';
 import type { IRedaction } from '../../models/redaction';
 import { buildFilterRegex, enabledPatterns } from '../filter/filterInput';
 import { hasUlid, regexUlid } from '../filter/filterUlid';
+import { notify } from '../toast';
 import { generateRedaction } from './redactionGenerator';
 import { REDACTION_SERVICE_KEY } from './redactionService';
 import {
@@ -215,6 +216,7 @@ function redact(e: ClipboardEvent): void {
 		}
 
 		persistRedactions(getRedactionsToPersist(redactedText, redactions));
+		notify('Clipboard redacted');
 	} catch (err) {
 		console.error(`AI-Shield: Redaction failed\n${err}`);
 	}
@@ -233,7 +235,13 @@ function unredact(): void {
 
 			const redactions = await redactionService.getManyByAlias(aliases);
 
-			await navigator.clipboard.writeText(unredactText(text, redactions));
+			const unredactedText = unredactText(text, redactions);
+
+			// no alias resolved: leave the clipboard alone, nothing to announce
+			if (unredactedText === text) return;
+
+			await navigator.clipboard.writeText(unredactedText);
+			notify('Clipboard unredacted');
 		} catch (err) {
 			console.error(err);
 		}
