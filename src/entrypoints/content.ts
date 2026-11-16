@@ -1,6 +1,16 @@
+import { MenuId, RESTORE_MESSAGE } from '../models/redaction';
 import { AI_MATCH_PATTERNS, isAiSite } from '../utils/aiSites';
 import { initPromptMirror } from '../utils/promptMirror';
-import { redact, unredact } from '../utils/redaction/redactionHandler';
+import {
+	redact,
+	redactSelection,
+	unredact,
+	whitelistSelection,
+} from '../utils/redaction/redactionHandler';
+import {
+	initRedactionOverlay,
+	restoreRedaction,
+} from '../utils/redaction/redactionOverlay';
 
 export default defineContentScript({
 	matches: AI_MATCH_PATTERNS,
@@ -10,6 +20,7 @@ export default defineContentScript({
 		if (!isAiSite(location.hostname, location.pathname)) return;
 
 		initPromptMirror();
+		initRedactionOverlay();
 
 		document.addEventListener('copy', unredact);
 		document.addEventListener('cut', unredact);
@@ -20,5 +31,21 @@ export default defineContentScript({
 		});
 
 		document.addEventListener('paste', redact, { capture: true });
+
+		const handlers: Record<
+			string,
+			(message: { alias: string; nth?: number }) => void
+		> = {
+			// context menu clicks, pushed from the background
+			[MenuId.Redact]: redactSelection,
+			[MenuId.Whitelist]: () => void whitelistSelection(),
+			// x on a highlighted span in the sidepanel prompt mirror
+			[RESTORE_MESSAGE]: ({ alias, nth = 0 }) =>
+				void restoreRedaction(alias, nth),
+		};
+
+		browser.runtime.onMessage.addListener((message) => {
+			handlers[message?.type]?.(message);
+		});
 	},
 });

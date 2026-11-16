@@ -46,6 +46,7 @@
 	--color-enabled: light-dark(#79740e, #b8bb26);
 	--color-custom: light-dark(#af3a03, #fe8019);
 	--color-danger: light-dark(#9d0006, #fb4934);
+	--color-redacted: #458588;
 }
 
 @layer base {

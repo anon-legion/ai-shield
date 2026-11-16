@@ -1,14 +1,15 @@
 import { describe, expect, test } from 'bun:test';
 import type { IRedaction } from '@/models/redaction';
 import { filterDefault } from '@/utils/filter/filterDefault';
+import { matchPlaceholders } from '@/utils/filter/filterUlid';
 import { generateRedaction } from '@/utils/redaction/redactionGenerator';
 import {
 	applyWhitelist,
 	boundTarget,
-	countMatches,
 	escapeRegExp,
 	findMatches,
 	redactText,
+	splitRedactions,
 	unredactText,
 } from '@/utils/redaction/redactionText';
 
@@ -123,6 +124,12 @@ describe('findMatches', () => {
 		expect(findMatches('nothing here', [/\d{4}/g])).toEqual([]);
 	});
 
+	// '' as a target would put a placeholder between every character
+	test('drops empty matches', () => {
+		expect(findMatches('abc', [/x*/g, /(?:)/g])).toEqual([]);
+		expect(findMatches('abc', [/b*/g])).toEqual(['b']);
+	});
+
 	test('collects across multiple patterns', () => {
 		expect(findMatches('abc 123', [/[a-z]+/g, /\d+/g])).toEqual(['abc', '123']);
 	});
@@ -136,25 +143,79 @@ describe('findMatches', () => {
 	});
 });
 
-describe('countMatches', () => {
-	// the deliberate difference from findMatches: every occurrence counts
-	test('counts repeated occurrences of the same value', () => {
-		expect(countMatches('a@b.com and a@b.com', [/[a-z]+@[a-z.]+/g])).toBe(2);
+describe('splitRedactions', () => {
+	test('returns no segments for empty text', () => {
+		expect(splitRedactions('', [redaction('a@b.com', 'ALIAS1')])).toEqual([]);
 	});
 
-	test('sums across multiple patterns', () => {
-		expect(countMatches('abc 123', [/[a-z]+/g, /\d+/g])).toBe(2);
+	test('returns one plain segment when there are no redactions', () => {
+		expect(splitRedactions('untouched', [])).toEqual([{ text: 'untouched' }]);
 	});
 
-	test('returns 0 for empty text', () => {
-		expect(countMatches('', [/\d+/g])).toBe(0);
+	test('marks the restored span with its alias', () => {
+		expect(
+			splitRedactions('mail [ALIAS1] now', [redaction('a@b.com', 'ALIAS1')]),
+		).toEqual([
+			{ text: 'mail ' },
+			{ text: 'a@b.com', alias: 'ALIAS1', nth: 0 },
+			{ text: ' now' },
+		]);
 	});
 
-	test('is repeatable with a stateful global regex', () => {
-		const regex = /\d{4}/g;
+	// nth is how the sidepanel tells the chatbox which occurrence to restore
+	test('numbers repeated occurrences of one alias', () => {
+		const segments = splitRedactions('[ALIAS1] and [ALIAS2] and [ALIAS1]', [
+			redaction('a@b.com', 'ALIAS1'),
+			redaction('c@d.com', 'ALIAS2'),
+		]);
 
-		expect(countMatches('1234 5678', [regex])).toBe(2);
-		expect(countMatches('1234 5678', [regex])).toBe(2);
+		expect(segments.filter((segment) => segment.alias)).toEqual([
+			{ text: 'a@b.com', alias: 'ALIAS1', nth: 0 },
+			{ text: 'c@d.com', alias: 'ALIAS2', nth: 0 },
+			{ text: 'a@b.com', alias: 'ALIAS1', nth: 1 },
+		]);
+	});
+
+	test('emits no empty plain segment between adjacent spans', () => {
+		expect(
+			splitRedactions('[ALIAS1][ALIAS2]', [
+				redaction('a@b.com', 'ALIAS1'),
+				redaction('c@d.com', 'ALIAS2'),
+			]),
+		).toEqual([
+			{ text: 'a@b.com', alias: 'ALIAS1', nth: 0 },
+			{ text: 'c@d.com', alias: 'ALIAS2', nth: 0 },
+		]);
+	});
+
+	test('keeps an unknown alias as plain text', () => {
+		expect(
+			splitRedactions('call [MISSING]', [redaction('0123456789', 'ALIAS1')]),
+		).toEqual([{ text: 'call [MISSING]' }]);
+	});
+
+	// the sidepanel x sends (alias, nth) and the chatbox restores the nth
+	// placeholder with that alias, so both sides must number occurrences alike
+	test('nth agrees with the chatbox placeholder order', () => {
+		const first = generateRedaction({ target: 'a@b.com', alias: '' });
+		const second = generateRedaction({ target: 'c@d.com', alias: '' });
+		const text = `[${first.alias}] x [${second.alias}] y [${first.alias}] z [${second.alias}] [${first.alias}]`;
+
+		const placeholders = matchPlaceholders(text);
+		const spans = splitRedactions(text, [first, second]).filter(
+			(segment) => segment.alias,
+		);
+
+		expect(spans).toHaveLength(placeholders.length);
+
+		spans.forEach((span, index) => {
+			const sameAlias = placeholders.filter(
+				(placeholder) => placeholder.alias === span.alias,
+			);
+
+			expect(span.alias).toBe(placeholders[index].alias);
+			expect(sameAlias[span.nth ?? -1]).toBe(placeholders[index]);
+		});
 	});
 });
 

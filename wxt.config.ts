@@ -10,7 +10,7 @@ export default defineConfig({
 		developmentIndicator: false,
 	},
 	manifest: ({ browser }) => ({
-		permissions: ['clipboardRead', 'clipboardWrite', 'storage'],
+		permissions: ['clipboardRead', 'clipboardWrite', 'contextMenus', 'storage'],
 		// no popup: the toolbar icon opens the side panel (see background.ts)
 		action: {
 			default_title: 'AI Shield',
