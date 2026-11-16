@@ -1,13 +1,13 @@
 import { createProxyService } from '@webext-core/proxy-service';
-import { hasUlid, regexUlid } from '../filter/filterUlid';
+import { hasUlid, matchPlaceholders } from '../filter/filterUlid';
 import { insertText, isTextField } from './redactionHandler';
 import { REDACTION_SERVICE_KEY } from './redactionService';
 
 const redactionService = createProxyService(REDACTION_SERVICE_KEY);
 
-// ponytail: any [ULID]-shaped text counts, known redaction or not; the x on
-// an unknown one is a no-op. check against the db if false positives show up
-const regexPlaceholder = new RegExp(`\\[(${regexUlid.source})\\]`, 'g');
+// the highlight color; keep equal to --color-redacted in src/assets/tailwind.css,
+// which the sidepanel uses (the page cannot read it)
+const BLUE = '#458588';
 
 interface IPlaceholder {
 	alias: string;
@@ -72,13 +72,13 @@ let lastGeometry = '';
 let hasPlaceholder = false;
 
 function placeholdersIn(node: Text): IPlaceholder[] {
-	return [...node.data.matchAll(regexPlaceholder)].map((match) => {
+	return matchPlaceholders(node.data).map(({ alias, start, end }) => {
 		const range = document.createRange();
 
-		range.setStart(node, match.index);
-		range.setEnd(node, match.index + match[0].length);
+		range.setStart(node, start);
+		range.setEnd(node, end);
 
-		return { alias: match[1], range, start: match.index };
+		return { alias, range, start };
 	});
 }
 
@@ -95,7 +95,7 @@ function syncMirror(field: HTMLTextAreaElement | HTMLInputElement): void {
 	mirror.style.width = `${rect.width}px`;
 	mirror.style.height = `${rect.height}px`;
 	// zero-width tail keeps a trailing newline's line, so scroll heights agree
-	mirror.textContent = `${field.value}​`;
+	mirror.textContent = `${field.value}\u200b`;
 	mirror.scrollTop = field.scrollTop;
 	mirror.scrollLeft = field.scrollLeft;
 }
@@ -143,14 +143,13 @@ function createBox(rect: DOMRect, alias: string, nth: number): HTMLElement {
 	const box = document.createElement('div');
 	const button = document.createElement('button');
 
-	// gruvbox blue, translucent so the placeholder stays readable
-	box.style.cssText = `position:fixed;left:${rect.left}px;top:${rect.top}px;width:${rect.width}px;height:${rect.height}px;border-radius:3px;background:rgb(69 133 136 / 0.35);pointer-events:none`;
+	// 59 = 35% alpha, translucent so the placeholder stays readable
+	box.style.cssText = `position:fixed;left:${rect.left}px;top:${rect.top}px;width:${rect.width}px;height:${rect.height}px;border-radius:3px;background:${BLUE}59;pointer-events:none`;
 
 	button.type = 'button';
 	button.textContent = '×';
 	button.title = 'Restore original text';
-	button.style.cssText =
-		'all:initial;position:absolute;top:-8px;right:-8px;width:14px;height:14px;border-radius:50%;background:#458588;color:#fbf1c7;font:700 11px/14px sans-serif;text-align:center;cursor:pointer;pointer-events:auto';
+	button.style.cssText = `all:initial;position:absolute;top:-8px;right:-8px;width:14px;height:14px;border-radius:50%;background:${BLUE};color:#fbf1c7;font:700 11px/14px sans-serif;text-align:center;cursor:pointer;pointer-events:auto`;
 
 	// mousedown, not click: keeps focus and caret in the chatbox, and a
 	// re-render between down and up cannot swallow it

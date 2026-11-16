@@ -58,7 +58,7 @@ async function restore(segment: IPromptSegment): Promise<void> {
 						aria-label="Restore original text"
 						title="Restore original text"
 						onclick={() => restore(segment)}
-						class="absolute -top-2 -right-2 grid size-3 cursor-pointer place-items-center rounded-full bg-redacted text-panel"
+						class="absolute -top-2 -right-2 grid size-3 cursor-pointer place-items-center rounded-full bg-redacted text-[#fbf1c7]"
 					>
 						<Icon name="x" size={8} strokeWidth={3} />
 					</button>

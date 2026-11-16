@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import type { IRedaction } from '@/models/redaction';
 import { filterDefault } from '@/utils/filter/filterDefault';
+import { matchPlaceholders } from '@/utils/filter/filterUlid';
 import { generateRedaction } from '@/utils/redaction/redactionGenerator';
 import {
 	applyWhitelist,
@@ -185,6 +186,30 @@ describe('splitRedactions', () => {
 		expect(
 			splitRedactions('call [MISSING]', [redaction('0123456789', 'ALIAS1')]),
 		).toEqual([{ text: 'call [MISSING]' }]);
+	});
+
+	// the sidepanel x sends (alias, nth) and the chatbox restores the nth
+	// placeholder with that alias, so both sides must number occurrences alike
+	test('nth agrees with the chatbox placeholder order', () => {
+		const first = generateRedaction({ target: 'a@b.com', alias: '' });
+		const second = generateRedaction({ target: 'c@d.com', alias: '' });
+		const text = `[${first.alias}] x [${second.alias}] y [${first.alias}] z [${second.alias}] [${first.alias}]`;
+
+		const placeholders = matchPlaceholders(text);
+		const spans = splitRedactions(text, [first, second]).filter(
+			(segment) => segment.alias,
+		);
+
+		expect(spans).toHaveLength(placeholders.length);
+
+		spans.forEach((span, index) => {
+			const sameAlias = placeholders.filter(
+				(placeholder) => placeholder.alias === span.alias,
+			);
+
+			expect(span.alias).toBe(placeholders[index].alias);
+			expect(sameAlias[span.nth ?? -1]).toBe(placeholders[index]);
+		});
 	});
 });
 
