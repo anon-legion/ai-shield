@@ -11,16 +11,18 @@ import {
 	initRedactionOverlay,
 	restoreRedaction,
 } from '../utils/redaction/redactionOverlay';
+import { initToast } from '../utils/toast';
 
 export default defineContentScript({
 	matches: AI_MATCH_PATTERNS,
-	main() {
+	main(ctx) {
 		// ponytail: match patterns can't gate SPA path changes (x.com/i/grok),
 		// re-check here; navigating into /i/grok after load stays uncovered
 		if (!isAiSite(location.hostname, location.pathname)) return;
 
 		initPromptMirror();
 		initRedactionOverlay();
+		initToast(ctx);
 
 		document.addEventListener('copy', unredact);
 		document.addEventListener('cut', unredact);

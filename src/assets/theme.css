@@ -1,0 +1,30 @@
+/* gruvbox tokens, shared by the sidepanel (tailwind.css) and the in-page
+   toast (toast.css) */
+@theme {
+	--font-sans: Archivo, system-ui, sans-serif;
+	--font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+	--color-panel: light-dark(#f9f5d7, #1d2021);
+	--color-surface: light-dark(#fbf1c7, #282828);
+	--color-rule: light-dark(#ebdbb2, #3c3836);
+	--color-border: light-dark(#d5c4a1, #504945);
+	--color-unchecked: light-dark(#bdae93, #665c54);
+	--color-fg: light-dark(#3c3836, #ebdbb2);
+	--color-muted: light-dark(#7c6f64, #a89984);
+	--color-faint: #928374;
+	--color-primary: light-dark(#b57614, #fabd2f);
+	--color-primary-hover: light-dark(#8f5a0f, #d79921);
+	--color-enabled: light-dark(#79740e, #b8bb26);
+	--color-custom: light-dark(#af3a03, #fe8019);
+	--color-danger: light-dark(#9d0006, #fb4934);
+	--color-redacted: #458588;
+}
+
+/* the light-dark() tokens resolve where they are declared, so the scheme has
+   to sit on the same element: :root in the sidepanel, :host in the toast */
+@layer base {
+	:root,
+	:host {
+		color-scheme: light dark;
+	}
+}

@@ -35,6 +35,8 @@ The extension does nothing on any other site.
 - **Restore on copy.** Copying or cutting on the page, or using a site's own "copy" button,
   rewrites the clipboard so placeholders become the original values again. Bold and
   markdown-escaped forms of a placeholder (`[**…**]`, `\[…\]`) are recognised too.
+- **Toast on automatic changes.** When a paste is redacted or a copy is restored, a short
+  notice appears on the page for three seconds. Actions you trigger yourself show none.
 - **Built-in filters.** Emails, phone numbers, names, credit cards, bank accounts, API keys,
   secrets (private keys, bearer tokens, passwords in `key=value` form, credentials in URLs)
   and passport numbers. Each can be switched off or have its label and pattern edited.

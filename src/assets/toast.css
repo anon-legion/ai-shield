@@ -1,0 +1,32 @@
+/* injected into ai pages: scan the toast only, so the css stays small and a
+   sidepanel change cannot leak styles into the host page. no @font-face on
+   purpose, font-sans falls through to system-ui there */
+@import "tailwindcss" source(none);
+@import "./theme.css";
+@source "../lib/components/Toast.svelte";
+
+@theme {
+	/* the animation is the toast's whole lifetime: Toast.svelte removes it on
+	   animationend, so the duration here is how long a toast lasts */
+	--animate-toast: toast 3s ease-out both;
+
+	@keyframes toast {
+		0% {
+			opacity: 0;
+			translate: 0 4px;
+		}
+
+		6% {
+			opacity: 1;
+			translate: 0 0;
+		}
+
+		90% {
+			opacity: 1;
+		}
+
+		100% {
+			opacity: 0;
+		}
+	}
+}
